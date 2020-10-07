@@ -1,0 +1,32 @@
+{
+  "name": "christmassorter",
+  "version": "1.0.0",
+  "description": "Christmas Sorter",
+  "main": "index.js",
+  "dependencies": {
+    "express": "^4.16.4",
+    "nodemailer": "^4.7.0",
+    "react": "^16.6.3",
+    "react-advanced-form": "^1.5.9"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "dev": "npm run build-front && npm run build-api && node ./API/bin/Index.js",
+    "build-api": "cd API && npm i && npm run build && cd ..",
+    "build-front": "npm run heroku-postbuild",
+    "start": "cd API && npm i && npm run build && node ./bin/Index.js",
+    "heroku-postbuild": "cd React-UI && npm install && npm install --only=dev --no-shrinkwrap && npm run build cd ..",
+    "build": "npm run heroku-postbuild"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/break7533/ChristmasSorter.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/break7533/ChristmasSorter/issues"
+  },
+  "homepage": "https://github.com/break7533/ChristmasSorter#readme"
+}
