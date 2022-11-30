@@ -5,7 +5,7 @@ import { EmailList } from "../Interfaces/EmailList.interface";
  * Fisher–Yates shuffle
  * @param array Array to be shuffled
  */
-function shuffle(array: any) {
+function shuffle(array: Array<any>) {
   let currentIndex = array.length,
     temporaryValue: any,
     randomIndex: number;
@@ -25,8 +25,8 @@ function shuffle(array: any) {
   return array;
 }
 
-export function sortEventMembers(members: Array<Member>): Array<EmailList> {
-  const arr: Array<Member> = shuffle(members);
+export function sortEventMembers(participants: Array<Member>): Array<EmailList> {
+  const arr: Array<Member> = shuffle(participants);
 
   const sendingList: Array<EmailList> = [];
 

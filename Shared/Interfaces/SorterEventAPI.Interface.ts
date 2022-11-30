@@ -4,6 +4,6 @@ export interface SorterEvent {
   name: string;
   giftPrice: number;
   currency?: string;
-  members: Array<Member>;
+  participants: Array<Member>;
   date: string;
 }
