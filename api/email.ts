@@ -1,15 +1,28 @@
 import { VercelRequest, VercelResponse } from "@vercel/node";
-import sgMail, { MailDataRequired } from "@sendgrid/mail";
 import { SorterEvent } from "../Shared/Interfaces/SorterEventAPI.interface";
 import { EmailList } from "../Shared/Interfaces/EmailList.interface";
 import { sortEventMembers } from "../Shared/business/Sorter";
+import {
+  createTransport,
+  getTestMessageUrl,
+  SendMailOptions,
+} from "nodemailer";
+import { Address } from "nodemailer/lib/mailer";
 
-function sendEmail(event: SorterEvent, recipient: EmailList): MailDataRequired {
+function generateBody(
+  event: SorterEvent,
+  recipient: EmailList
+): SendMailOptions {
   const currency = event.currency ? event.currency : "€";
 
-  const msg: MailDataRequired = {
-    to: { email: recipient.from.email, name: recipient.from.name },
-    from: "christmassorter@gmail.com",
+  const address: Address = {
+    name: recipient.from.name,
+    address: recipient.from.email,
+  };
+
+  const msg: SendMailOptions = {
+    from: "jecabeda@gmail.com",
+    to: address,
     subject: event.name,
     text: `Hi there ${recipient.from.name}!
 
@@ -22,23 +35,39 @@ function sendEmail(event: SorterEvent, recipient: EmailList): MailDataRequired {
   return msg;
 }
 
-export default (_req: VercelRequest, res: VercelResponse) => {
-  // using Twilio SendGrid's v3 Node.js Library
-  // https://github.com/sendgrid/sendgrid-nodejs
+export default function handler(
+  request: VercelRequest,
+  response: VercelResponse
+) {
+  const body = request.body as SorterEvent;
 
-  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-  const body = _req.body as SorterEvent;
+  // create reusable transporter object using the default SMTP transport
+  const transporter = createTransport({
+    host: "smtp.ethereal.email",
+    port: 587,
+    auth: {
+      user: "andreanne57@ethereal.email",
+      pass: "nGRx52fgkJ7h8sTexr",
+    },
+  });
 
-  const emails: MailDataRequired[] = sortEventMembers(body.members).map(
-    (member) => sendEmail(body, member)
+  const emails = sortEventMembers(body.members).map((member) =>
+    generateBody(body, member)
   );
 
-  sgMail
-    .send(emails, true)
-    .then(() => {
-      res.status(200).send("All emails sent with success");
-    })
-    .catch((error) => {
-      res.status(500).send(error);
-    });
-};
+  for (const email of emails) {
+    // send mail with defined transport object
+    transporter
+      .sendMail(email)
+      .then((info) => {
+        console.log("Message sent: %s", info.messageId);
+        // Preview only available when sending through an Ethereal account
+        console.log("Preview URL: %s", getTestMessageUrl(info));
+      })
+      .catch((error) => {
+        console.error(error);
+        response.status(500).send("Error sending email");
+      });
+  }
+  response.status(200).send("All emails sent with success");
+}
