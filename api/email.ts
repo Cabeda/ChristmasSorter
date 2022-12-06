@@ -30,11 +30,11 @@ function get_messages(
     default:
       return `Olá ${fromName}!
 
-      Foi convidado para um evento de amigo secreto a ${new Date(
+Foi convidado para um evento de amigo secreto a ${new Date(
         date
       ).toDateString()}, ${eventName}. O limite da prenda é de ${giftPrice}€, e tem de oferecer a ${toName} (${email}).
       
-      Boa sorte!!! 
+Boa sorte!!! 
             `;
   }
 }
