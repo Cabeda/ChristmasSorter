@@ -1,3 +1,4 @@
+import { Languages } from "./Languages.enum";
 import Member from "./Member.interface";
 
 export interface SorterEvent {
@@ -6,4 +7,5 @@ export interface SorterEvent {
   currency?: string;
   participants: Array<Member>;
   date: string;
+  languages: Languages;
 }

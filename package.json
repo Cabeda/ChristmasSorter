@@ -5,7 +5,6 @@
   "dependencies": {
     "@hookform/resolvers": "^2.9.10",
     "@sendgrid/mail": "^7.6.0",
-    "@types/jest": "^29.2.3",
     "@vercel/node": "^2.7.0",
     "nodemailer": "^6.8.0",
     "react": "^18.2.0",
@@ -32,6 +31,7 @@
     "not op_mini all"
   ],
   "devDependencies": {
+    "@types/jest": "^29.2.3",
     "@types/nodemailer": "^6.4.6",
     "@types/react": "^18.0.25",
     "@types/react-dom": "^18.0.9"
