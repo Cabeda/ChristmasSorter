@@ -10,7 +10,7 @@ function get_messages(
   language: Languages = Languages.PT,
   fromName: string,
   toName: string,
-  date: string,
+  date: Date,
   eventName: string,
   giftPrice: number,
   currency: string = "€",
@@ -20,19 +20,15 @@ function get_messages(
     case Languages.EN:
       return `Hi there ${fromName}!
 
-      You were invited to a Secret Santa at ${new Date(
-        date
-      ).toDateString()} named ${eventName}. The limit of the gift is ${giftPrice}${currency}, and you are to give a gift to ${toName} (${email}).
+You were invited to a Secret Santa at ${new Date().getDate()}/${new Date().getMonth()}/${new Date().getFullYear()} named ${eventName}. The limit of the gift is ${giftPrice}${currency}, and you are to give a gift to ${toName} (${email}).
       
-      Best regards and happy gift Exchange!!!
+Best regards and happy gift Exchange!!!
             `;
     case Languages.PT:
     default:
       return `Olá ${fromName}!
 
-Foi convidado para um evento de amigo secreto a ${new Date(
-        date
-      ).toDateString()}, ${eventName}. O limite da prenda é de ${giftPrice}€, e tem de oferecer a ${toName} (${email}).
+Foi convidado para um evento de amigo secreto a ${new Date().getDate()}/${new Date().getMonth()}/${new Date().getFullYear()}, ${eventName}. O limite da prenda é de ${giftPrice}€, e tem de oferecer a ${toName} (${email}).
       
 Boa sorte!!! 
             `;
@@ -58,7 +54,7 @@ function generateBody(
       Languages.PT,
       recipient.from.name,
       recipient.to.name,
-      new Date(event.date).toDateString(),
+      new Date(event.date),
       event.name,
       event.giftPrice,
       currency,
