@@ -7,7 +7,7 @@
     "checkJs": false,
     "disableSizeLimit": false,
     "generateCpuProfile": "profile.cpuprofile",
-    "jsx": "react",
+    "jsx": "react-jsx",
     "jsxFactory": "React.createElement",
     "jsxFragmentFactory": "React.Fragment",
     "lib": [
