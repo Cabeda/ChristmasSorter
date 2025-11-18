@@ -105,6 +105,7 @@ export default function RegistrationForm(action: any) {
         if (next >= 7) { setSantaMode(!santaMode); setClicks(0); }
       }} role="button" tabIndex={0} aria-label="Cabeçalho festivo">
         <h2 className={styles.title}>🎄 Registro do Amigo Secreto</h2>
+        <p className={styles.subtitle}>Organize seu Amigo Secreto de forma rápida e divertida</p>
         <div className={styles.ornament} aria-hidden>⚪️</div>
       </div>
       <div className={styles.snow} aria-hidden>
@@ -151,6 +152,7 @@ export default function RegistrationForm(action: any) {
           {...register("price")}
         />
         {errors.price && <p className={styles.fieldError}>{errors.price.message}</p>}
+        <p className={styles.hint}>Digite apenas números — sem símbolos (ex: 20)</p>
       </fieldset>
 
       <fieldset className={styles.fieldset}>
@@ -174,10 +176,9 @@ export default function RegistrationForm(action: any) {
           ➕
         </button>
       </div>
-
       {fields.map((field, index) => (
         <section className={styles.participant} key={field.id}>
-          <div className={styles.row}>
+          <div className={styles.row} role="group" aria-label={`Participante ${index + 1}`}>
             <label htmlFor={`p-name-${index}`} className={styles.visuallyHidden}>
               Nome do participante {index + 1}
             </label>
