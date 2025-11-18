@@ -20,17 +20,15 @@ function generateBody(
     from: process.env.MAIL_ADDRESS,
     to: address,
     subject: event.name,
-    text: `Hi there ${recipient.from.name}!
+    text: `Olá ${recipient.from.name}!
 
-    You were invited to a Secret Santa at ${new Date(event.date).toDateString()} named ${
+    Você foi convidado para um Amigo Secreto em ${new Date(event.date).toDateString()} com o nome ${
       event.name
-    }. The limit of the gift is ${
+    }. O limite do presente é de ${
       event.giftPrice
-    }${currency}, and you are to give a gift to ${recipient.to.name} (${
-      recipient.to.email
-    }).
-    
-    Best regards and happy gift Exchange!!!
+    }${currency}, e você deverá dar um presente para ${recipient.to.name} (${recipient.to.email}).
+
+    Boas festas e boas trocas de presentes!!!
           `,
   };
 
@@ -64,8 +62,8 @@ export default async function handler(
       console.log("Message sent: %s", info.messageId);
     } catch (error) {
       console.error(error);
-      res.status(500).send("Error sending email");
+      res.status(500).send("Erro ao enviar e-mail");
     }
   }
-  res.status(200).send("All emails sent with success");
+  res.status(200).send("Todos os e-mails enviados com sucesso");
 }
