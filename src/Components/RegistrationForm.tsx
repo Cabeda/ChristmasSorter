@@ -43,8 +43,9 @@ export default function RegistrationForm(action: any) {
   const {
     control,
     register,
-    handleSubmit,
     reset,
+    trigger,
+    getValues,
     formState: { errors },
   } = useForm<Inputs>({
     resolver: zodResolver(Schema),
@@ -96,8 +97,27 @@ export default function RegistrationForm(action: any) {
     }
   };
 
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [confirmLoading, setConfirmLoading] = useState(false);
+
+  const openConfirm = async () => {
+    const valid = await trigger();
+    if (valid) setShowConfirm(true);
+  };
+
+  const handleConfirm = async () => {
+    setConfirmLoading(true);
+    try {
+      const values = getValues();
+      await onSubmit(values as Inputs);
+    } finally {
+      setConfirmLoading(false);
+      setShowConfirm(false);
+    }
+  };
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className={`${styles.form} ${santaMode ? styles.santaMode : ""}`} noValidate>
+    <form onSubmit={(e) => { e.preventDefault(); openConfirm(); }} className={`${styles.form} ${santaMode ? styles.santaMode : ""}`} noValidate>
       <div className={styles.header} onClick={() => {
         // playful easter egg: click 7 times to toggle santa mode
         const next = clicks + 1;
@@ -229,6 +249,27 @@ export default function RegistrationForm(action: any) {
       <p className={styles.hint}>
         Ao enviar, o sistema fará o sorteio aleatório e enviará, por e-mail, para cada participante a pessoa que lhe foi atribuída. Os resultados são confidenciais — cada participante só recebe o seu próprio destinatário.
       </p>
+
+      {showConfirm && (
+        <div className={styles.modalOverlay} onClick={() => setShowConfirm(false)}>
+          <div className={styles.modal} role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+            <h3 className={styles.modalHeader}>Confirmar envio</h3>
+            <div className={styles.modalBody}>
+              <p>Você está prestes a enviar e-mails para os participantes com os resultados do sorteio. Confirme os detalhes abaixo:</p>
+              <ul>
+                <li><strong>Evento:</strong> {getValues().eventName}</li>
+                <li><strong>Data:</strong> {getValues().eventDate?.toString()}</li>
+                <li><strong>Participantes:</strong> {getValues().participants?.length || 0}</li>
+                <li><strong>Preço máximo:</strong> {getValues().price} {getValues().currency}</li>
+              </ul>
+            </div>
+            <div className={styles.modalActions}>
+              <button type="button" className={styles.deleteButton} onClick={() => setShowConfirm(false)}>Cancelar</button>
+              <button type="button" className={styles.primary} onClick={handleConfirm} disabled={confirmLoading}>{confirmLoading ? 'Enviando...' : 'Confirmar e enviar'}</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {statusMessage && (
         <div className={statusMessage.type === "success" ? `${styles.success} ${styles.confetti}` : styles.errorMessage} role="status" aria-live="polite">
