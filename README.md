@@ -1,46 +1,51 @@
 # Christmas Sorter
 
-Application to send emails to a group with the secret santa gift.
+Web app to run a Secret Santa / Amigo Secreto event and send invitation emails to participants.
 
-## Available Scripts
+This repository contains a small React frontend (Vite) and a serverless API endpoint (`/api/email`) that sends emails to the participants after performing the random assignment.
 
-In the project directory, you can run:
+Quick overview
 
-### `npm start`
+- Frontend: `src/` — main UI is `src/Components/RegistrationForm.tsx`.
+- Serverless email endpoint: `api/email.ts` — sends emails using SMTP (nodemailer).
+- Business logic: `Shared/business/Sorter.ts` — performs the assignment.
 
-Runs the app in the development mode.<br>
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+Requirements
 
-The page will reload if you make edits.<br>
-You will also see any lint errors in the console.
+- Node.js (>=16) and a package manager (`pnpm`, `npm` or `yarn`).
+- SMTP credentials (environment variables) to send emails in `api/email.ts`:
+  - `MAIL_ADDRESS` — sender email
+  - `MAIL_PASSWORD` — SMTP password (or app password)
 
-### `npm test`
+Scripts
 
-Launches the test runner in the interactive watch mode.<br>
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+- `pnpm install` or `npm install` — install dependencies
+- `pnpm dev` / `npm run dev` — start Vite development server (opens app at `http://localhost:5173` by default)
+- `pnpm build` / `npm run build` — build production assets
+- `pnpm preview` / `npm run preview` — preview production build locally
+- `pnpm test` / `npm test` — run unit tests with Vitest (if any)
+- `pnpm format` / `npm run format` — run Prettier on source files
 
-### `npm run build`
+How it works
 
-Builds the app for production to the `build` folder.<br>
-It correctly bundles React in production mode and optimizes the build for the best performance.
+1. Open the app and fill the registration form (event name, date, price, participants).
+2. Click the `Sortear` / `Shuffle` button to run the assignment and trigger the `/api/email` endpoint.
+3. The serverless function will compute recipients and send an email to each participant with the assigned person.
 
-The build is minified and the filenames include the hashes.<br>
-Your app is ready to be deployed!
+Notes
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+- The UI supports a festive theme and includes an easter-egg "Santa mode" (click the header several times).
+- The email text and many UI strings were translated to Portuguese; you can revert or adapt the texts in `src/Components/RegistrationForm.tsx` and `api/email.ts`.
+- For deployment, this repo works well on Vercel — the `api/` folder maps to serverless functions automatically when deployed to Vercel.
 
-### `npm run eject`
+Security
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+- Do not commit SMTP credentials or other secrets to the repository. Use environment variables in your deployment platform.
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+Contributing
 
-Instead, it will copy all the configuration files and the transitive dependencies (Webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+- Fixes, improvements and translations are welcome. Open a PR against the `master` branch (or `feat/*` branches as used during development).
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+License
 
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
+- This project does not include a license file. Add one if you plan to open-source it.
