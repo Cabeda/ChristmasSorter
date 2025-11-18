@@ -226,6 +226,10 @@ export default function RegistrationForm(action: any) {
         </button>
       </div>
 
+      <p className={styles.hint}>
+        Ao enviar, o sistema fará o sorteio aleatório e enviará, por e-mail, para cada participante a pessoa que lhe foi atribuída. Os resultados são confidenciais — cada participante só recebe o seu próprio destinatário.
+      </p>
+
       {statusMessage && (
         <div className={statusMessage.type === "success" ? `${styles.success} ${styles.confetti}` : styles.errorMessage} role="status" aria-live="polite">
           {statusMessage.text}

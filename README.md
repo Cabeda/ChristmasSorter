@@ -32,6 +32,12 @@ How it works
 2. Click the `Sortear` / `Shuffle` button to run the assignment and trigger the `/api/email` endpoint.
 3. The serverless function will compute recipients and send an email to each participant with the assigned person.
 
+More about how assignments and emails work
+
+- When you submit the form the backend performs a random assignment: each participant is assigned another participant to give a gift to. The algorithm ensures that participants are assigned fairly and (depending on the rule set) avoids assigning someone to themselves.
+- After the assignment is computed, the serverless function (`/api/email`) sends an individual email to each participant with the name and contact of the person they should give a gift to. Each participant receives only their own assignment — results are private and not shared with others.
+- Make sure all participant emails are correct before submitting; once the function sends emails the action cannot be undone by the UI. For testing, use a disposable SMTP (or your own inbox) to verify formatting and delivery.
+
 Notes
 
 - The UI supports a festive theme and includes an easter-egg "Santa mode" (click the header several times).
