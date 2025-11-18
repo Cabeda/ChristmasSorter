@@ -8,8 +8,6 @@
     "disableSizeLimit": false,
     "generateCpuProfile": "profile.cpuprofile",
     "jsx": "react-jsx",
-    "jsxFactory": "React.createElement",
-    "jsxFragmentFactory": "React.Fragment",
     "lib": [
       "dom"
     ],
