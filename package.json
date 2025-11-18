@@ -1,6 +1,7 @@
 {
   "name": "christmassorter",
   "version": "1.0.0",
+  "packageManager": "pnpm@9.0.0",
   "private": true,
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
