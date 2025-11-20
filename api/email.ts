@@ -9,21 +9,42 @@ function generateBody(
   recipient: EmailList
 ): SendMailOptions {
   const currency = event.currency ? event.currency : "€";
+  const eventDate = new Date(event.date);
+  const formattedDate = eventDate.toLocaleDateString("pt-pt", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  const textBody = [
+    `Olá ${recipient.from.name},`,
+    "",
+    `Você foi sorteado para o Amigo Secreto "${event.name}" em ${formattedDate}.`,
+    `Orçamento: ${event.giftPrice}${currency}`,
+    `Presente para: ${recipient.to.name} (${recipient.to.email})`,
+    "",
+    "Boas festas e boas trocas de presentes!",
+  ].join("\n");
+
+  const htmlBody = `
+    <p>Olá <strong>${recipient.from.name}</strong>,</p>
+    <p>Você foi sorteado para o <strong>Amigo Secreto</strong> <em>${event.name}</em> no dia <strong>${formattedDate}</strong>.</p>
+    <ul>
+      <li><strong>Orçamento:</strong> ${event.giftPrice}${currency}</li>
+      <li><strong>Presente para:</strong> ${recipient.to.name} (${recipient.to.email})</li>
+    </ul>
+    <p>Boas festas e boas trocas de presentes!</p>
+    <hr />
+    <p style="font-size:0.9em;color:#666;">Enviado por ${process.env.MAIL_ADDRESS}</p>
+  `;
 
   const msg: SendMailOptions = {
     from: process.env.MAIL_ADDRESS,
     to: recipient.to.email,
-    subject: event.name,
-    text: `Olá ${recipient.from.name}!
-
-    Você foi convidado para um Amigo Secreto em ${new Date(event.date).toDateString()} com o nome ${
-      event.name
-    }. O limite do presente é de ${
-      event.giftPrice
-    }${currency}, e você deverá dar um presente para ${recipient.to.name} (${recipient.to.email}).
-
-    Boas festas e boas trocas de presentes!!!
-          `,
+    subject: `${event.name} — Amigo Secreto`,
+    text: textBody,
+    html: htmlBody,
   };
 
   return msg;
