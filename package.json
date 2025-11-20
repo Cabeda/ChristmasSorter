@@ -20,7 +20,8 @@
     "test": "vitest",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css}\"",
     "prepare": "husky install",
-    "lint:commit": "commitlint --from=HEAD~1"
+    "lint:commit": "commitlint --from=HEAD~1",
+    "type-check": "tsc --noEmit"
   },
   "eslintConfig": {
     "extends": "react-app"
