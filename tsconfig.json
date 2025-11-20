@@ -1,47 +1,19 @@
 {
   "compilerOptions": {
-    "allowJs": false,
-    "allowUnreachableCode": false,
-    "allowUnusedLabels": false,
-    "alwaysStrict": true,
-    "checkJs": false,
-    "disableSizeLimit": false,
-    "generateCpuProfile": "profile.cpuprofile",
-    "jsx": "react-jsx",
-    "lib": [
-      "dom"
-    ],
-    "noFallthroughCasesInSwitch": false,
-    "noImplicitAny": false,
-    "noImplicitReturns": true,
-    "noImplicitThis": true,
-    "noImplicitUseStrict": false,
-    "noStrictGenericChecks": false,
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
-    "removeComments": false,
-    "strictBindCallApply": true,
-    "strictFunctionTypes": true,
-    "strictNullChecks": true,
-    "strictPropertyInitialization": true,
-    "suppressExcessPropertyErrors": false,
-    "suppressImplicitAnyIndexErrors": false,
-    "useDefineForClassFields": false,
-    "target": "es5",
-    "skipLibCheck": false,
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM"],
+    "strict": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "strict": true,
-    "forceConsistentCasingInFileNames": true,
-    "module": "esnext",
-    "moduleResolution": "node",
     "resolveJsonModule": true,
-    "isolatedModules": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
     "noEmit": true,
-    "sourceMap": true
+    "baseUrl": ".",
+    "jsx": "react-jsx"
   },
-  "include": [
-    "src",
-    "Shared"
-  ]
+  "include": ["src/**/*", "Shared/**/*", "api/**/*", "scripts/**/*", "app.js"],
+  "exclude": ["node_modules", "dist", "public", ".vercel"]
 }

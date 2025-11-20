@@ -33,6 +33,9 @@ importers:
         specifier: ^4.1.12
         version: 4.1.12
     devDependencies:
+      '@types/node':
+        specifier: ^24.10.1
+        version: 24.10.1
       '@types/nodemailer':
         specifier: ^7.0.4
         version: 7.0.4
@@ -44,16 +47,16 @@ importers:
         version: 19.2.3(@types/react@19.2.6)
       '@vitejs/plugin-react':
         specifier: ^5.1.1
-        version: 5.1.1(vite@7.2.2(@types/node@16.18.11))
+        version: 5.1.1(vite@7.2.2(@types/node@24.10.1))
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
       vite:
         specifier: ^7.2.2
-        version: 7.2.2(@types/node@16.18.11)
+        version: 7.2.2(@types/node@24.10.1)
       vitest:
         specifier: ^4.0.10
-        version: 4.0.10(@edge-runtime/vm@3.2.0)(@types/node@16.18.11)
+        version: 4.0.10(@edge-runtime/vm@3.2.0)(@types/node@24.10.1)
 
 packages:
 
@@ -2916,7 +2919,7 @@ snapshots:
       json-schema-to-ts: 1.6.4
       ts-morph: 12.0.0
 
-  '@vitejs/plugin-react@5.1.1(vite@7.2.2(@types/node@16.18.11))':
+  '@vitejs/plugin-react@5.1.1(vite@7.2.2(@types/node@24.10.1))':
     dependencies:
       '@babel/core': 7.28.5
       '@babel/plugin-transform-react-jsx-self': 7.27.1(@babel/core@7.28.5)
@@ -2924,7 +2927,7 @@ snapshots:
       '@rolldown/pluginutils': 1.0.0-beta.47
       '@types/babel__core': 7.20.5
       react-refresh: 0.18.0
-      vite: 7.2.2(@types/node@16.18.11)
+      vite: 7.2.2(@types/node@24.10.1)
     transitivePeerDependencies:
       - supports-color
 
@@ -2937,13 +2940,13 @@ snapshots:
       chai: 6.2.1
       tinyrainbow: 3.0.3
 
-  '@vitest/mocker@4.0.10(vite@7.2.2(@types/node@16.18.11))':
+  '@vitest/mocker@4.0.10(vite@7.2.2(@types/node@24.10.1))':
     dependencies:
       '@vitest/spy': 4.0.10
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-      vite: 7.2.2(@types/node@16.18.11)
+      vite: 7.2.2(@types/node@24.10.1)
 
   '@vitest/pretty-format@4.0.10':
     dependencies:
@@ -3599,7 +3602,7 @@ snapshots:
 
   validator@13.15.23: {}
 
-  vite@7.2.2(@types/node@16.18.11):
+  vite@7.2.2(@types/node@24.10.1):
     dependencies:
       esbuild: 0.25.12
       fdir: 6.5.0(picomatch@4.0.3)
@@ -3608,13 +3611,13 @@ snapshots:
       rollup: 4.53.2
       tinyglobby: 0.2.15
     optionalDependencies:
-      '@types/node': 16.18.11
+      '@types/node': 24.10.1
       fsevents: 2.3.3
 
-  vitest@4.0.10(@edge-runtime/vm@3.2.0)(@types/node@16.18.11):
+  vitest@4.0.10(@edge-runtime/vm@3.2.0)(@types/node@24.10.1):
     dependencies:
       '@vitest/expect': 4.0.10
-      '@vitest/mocker': 4.0.10(vite@7.2.2(@types/node@16.18.11))
+      '@vitest/mocker': 4.0.10(vite@7.2.2(@types/node@24.10.1))
       '@vitest/pretty-format': 4.0.10
       '@vitest/runner': 4.0.10
       '@vitest/snapshot': 4.0.10
@@ -3631,11 +3634,11 @@ snapshots:
       tinyexec: 0.3.2
       tinyglobby: 0.2.15
       tinyrainbow: 3.0.3
-      vite: 7.2.2(@types/node@16.18.11)
+      vite: 7.2.2(@types/node@24.10.1)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@edge-runtime/vm': 3.2.0
-      '@types/node': 16.18.11
+      '@types/node': 24.10.1
     transitivePeerDependencies:
       - jiti
       - less

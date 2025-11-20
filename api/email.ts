@@ -1,9 +1,8 @@
 import { VercelRequest, VercelResponse } from "@vercel/node";
-import { SorterEvent } from "../Shared/Interfaces/SorterEventAPI.Interface";
-import { EmailList } from "../Shared/Interfaces/EmailList.interface";
-import { sortEventMembers } from "../Shared/business/Sorter";
+import type { SorterEvent } from "../Shared/Interfaces/SorterEventAPI.Interface";
+import type { EmailList } from "../Shared/Interfaces/EmailList.interface";
+import { sortEventMembers } from "../Shared/business/Sorter.js";
 import { createTransport, SendMailOptions } from "nodemailer";
-import { Address } from "nodemailer/lib/mailer";
 
 function generateBody(
   event: SorterEvent,
@@ -11,14 +10,9 @@ function generateBody(
 ): SendMailOptions {
   const currency = event.currency ? event.currency : "€";
 
-  const address: Address = {
-    name: recipient.from.name,
-    address: recipient.from.email,
-  };
-  
   const msg: SendMailOptions = {
     from: process.env.MAIL_ADDRESS,
-    to: address,
+    to: recipient.to.email,
     subject: event.name,
     text: `Olá ${recipient.from.name}!
 
@@ -35,10 +29,10 @@ function generateBody(
   return msg;
 }
 
-export const post = async (
+export default async function handler(
   _req: VercelRequest,
   res: VercelResponse
-) => {
+) {
   // Parse body safely (some clients may send raw JSON strings)
   let body: SorterEvent;
   try {
@@ -96,4 +90,4 @@ export const post = async (
   }
 
   return res.status(200).json({ success: failed.length === 0, sent, failedCount: failed.length, failures: failed });
-};
+}

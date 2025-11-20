@@ -9,7 +9,7 @@ import styles from "./RegistrationForm.module.css";
 type Inputs = {
   eventName: string;
   participants: Array<Member>;
-  eventDate: Date | string;
+  eventDate: Date;
   price: string;
   currency: string;
 };
@@ -48,10 +48,10 @@ export default function RegistrationForm(action: any) {
     getValues,
     formState: { errors },
   } = useForm<Inputs>({
-    resolver: zodResolver(Schema),
+    resolver: zodResolver(Schema) as any,
     defaultValues: {
       eventName: "Amigo Secreto",
-      eventDate: new Date().toISOString().substring(0, 10),
+      eventDate: new Date(),
       price: "5",
       currency: "euro",
       participants: [{ name: "", email: "" }, { name: "", email: "" }],

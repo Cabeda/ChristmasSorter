@@ -1,5 +1,5 @@
-import Member from "../Interfaces/Member.interface";
-import { EmailList } from "../Interfaces/EmailList.interface";
+import type Member from "../Interfaces/Member.interface";
+import type { EmailList } from "../Interfaces/EmailList.interface";
 
 /**
  * Fisher–Yates shuffle
