@@ -19,12 +19,12 @@ Requirements
 
 Scripts
 
-- `pnpm install` or `npm install` — install dependencies
-- `pnpm dev` / `npm run dev` — start Vite development server (opens app at `http://localhost:5173` by default)
-- `pnpm build` / `npm run build` — build production assets
-- `pnpm preview` / `npm run preview` — preview production build locally
-- `pnpm test` / `npm test` — run unit tests with Vitest (if any)
-- `pnpm format` / `npm run format` — run Prettier on source files
+- `pnpm install` — install dependencies
+- `pnpm dev` — start Vite development server (opens app at `http://localhost:5173` by default)
+- `pnpm build` — build production assets
+- `pnpm preview` — preview production build locally
+- `pnpm test` — run unit tests with Vitest (if any)
+- `pnpm format` — run Prettier on source files
 
 How it works
 
