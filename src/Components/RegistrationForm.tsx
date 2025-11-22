@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import React, { useState } from "react";
+import { useState } from "react";
 import { SubmitHandler, useFieldArray, useForm } from "react-hook-form";
 import { z } from "zod";
 import Member from "../../Shared/Interfaces/Member.interface";
@@ -34,7 +34,7 @@ const Schema = z
   })
   .required();
 
-export default function RegistrationForm(action: any) {
+export default function RegistrationForm() {
   const [submitting, setSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<null | { type: "success" | "error"; text: string }>(null);
   const [clicks, setClicks] = useState(0);

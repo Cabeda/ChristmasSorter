@@ -41,7 +41,7 @@ function generateBody(
 
   const msg: SendMailOptions = {
     from: process.env.MAIL_ADDRESS,
-    to: recipient.to.email,
+    to: recipient.from.email,
     subject: `${event.name} — Amigo Secreto`,
     text: textBody,
     html: htmlBody,
