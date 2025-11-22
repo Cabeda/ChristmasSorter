@@ -5,9 +5,9 @@ import type { EmailList } from "../Interfaces/EmailList.interface";
  * Fisher–Yates shuffle
  * @param array Array to be shuffled
  */
-function shuffle(array: Array<any>) {
+function shuffle<T>(array: T[]) {
   let currentIndex = array.length,
-    temporaryValue: any,
+    temporaryValue: T,
     randomIndex: number;
 
   // While there remain elements to shuffle...
@@ -16,9 +16,9 @@ function shuffle(array: Array<any>) {
     randomIndex = Math.floor(Math.random() * currentIndex);
     currentIndex -= 1;
 
-    // And swap it with the current element.
-    temporaryValue = array[currentIndex];
-    array[currentIndex] = array[randomIndex];
+    // And swap it with the current element. indices are in-range here so assert non-null
+    temporaryValue = array[currentIndex] as T;
+    array[currentIndex] = array[randomIndex] as T;
     array[randomIndex] = temporaryValue;
   }
 
@@ -26,14 +26,15 @@ function shuffle(array: Array<any>) {
 }
 
 export function sortEventMembers(participants: Array<Member>): Array<EmailList> {
-  const arr: Array<Member> = shuffle(participants);
+  if (participants.length === 0) return [];
+
+  const arr = shuffle(participants);
 
   const sendingList: Array<EmailList> = [];
 
   for (let i = 0; i < arr.length; i++) {
-    const from = arr[i];
-
-    const to = i === arr.length - 1 ? arr[0] : arr[i + 1];
+    const from = arr[i]!;
+    const to = i === arr.length - 1 ? arr[0]! : arr[i + 1]!;
     const email: EmailList = { from, to };
     sendingList.push(email);
   }

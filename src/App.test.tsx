@@ -1,4 +1,3 @@
-import React from 'react';
 import { it, expect } from 'vitest';
 import App from './App';
 
