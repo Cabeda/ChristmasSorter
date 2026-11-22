@@ -1,11 +1,11 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import handler from "./email";
-import { openToken } from "./_lib/token";
-import { createTransporter, sendAssignmentEmails } from "./_lib/mail";
-import { resetRateLimiter } from "./_lib/guard";
+import handler from "../email";
+import { openToken } from "../_lib/token";
+import { createTransporter, sendAssignmentEmails } from "../_lib/mail";
+import { resetRateLimiter } from "../_lib/guard";
 
-vi.mock("./_lib/mail.js", () => ({
+vi.mock("../_lib/mail.js", () => ({
   createTransporter: vi.fn(),
   sendAssignmentEmails: vi.fn(),
 }));
