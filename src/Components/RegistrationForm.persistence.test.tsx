@@ -138,6 +138,7 @@ describe("draft persistence", () => {
       target: { value: "Amigo Secreto da firma" },
     });
     await vi.waitFor(() => expect(storedDraft()).not.toBeNull());
+    await screen.findByRole("button", { name: "Limpar rascunho" });
 
     await user.click(screen.getByRole("button", { name: "Limpar rascunho" }));
 
