@@ -1,8 +1,13 @@
-import { it, expect } from 'vitest';
-import App from './App';
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import App from "./App";
 
-it('renders without crashing', () => {
-  // Render without a DOM by calling the component function
-  const tree = App();
-  expect(tree).toBeDefined();
+describe("App", () => {
+  it("renders the heading and the registration form", () => {
+    render(<App />);
+    expect(
+      screen.getByRole("heading", { level: 1, name: /organizador de amigo secreto/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /cabeçalho festivo/i })).toBeInTheDocument();
+  });
 });

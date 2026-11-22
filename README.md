@@ -1,57 +1,94 @@
 # Christmas Sorter
 
-Web app to run a Secret Santa / Amigo Secreto event and send invitation emails to participants.
+Web app to run a Secret Santa / Amigo Secreto event and send each participant
+their own assignment by email.
 
-This repository contains a small React frontend (Vite) and a serverless API endpoint (`/api/email`) that sends emails to the participants after performing the random assignment.
+This repository contains a small React frontend (Vite) and two serverless
+endpoints: `/api/email` draws and sends, and `/api/retry` resends only the
+recipients that failed. The draw is **blind**: the browser only receives an
+opaque, encrypted token, never the list of pairs, so the organizer (who is also
+a participant) cannot peek at who got whom.
 
-Quick overview
+## Requirements
 
-- Frontend: `src/` — main UI is `src/Components/RegistrationForm.tsx`.
-- Serverless email endpoint: `api/email.ts` — sends emails using SMTP (nodemailer).
-- Business logic: `Shared/business/Sorter.ts` — performs the assignment.
+- Node.js (>=16) and pnpm (the lockfile is pnpm).
+- SMTP credentials and a token secret.
+- `SORTER_SECRET` — required. It encrypts the token used by retries.
+  Generate one with `openssl rand -base64 48`.
 
-Requirements
+## Setup
 
-- Node.js (>=16) and a package manager (`pnpm`, `npm` or `yarn`).
-- SMTP credentials (environment variables) to send emails in `api/email.ts`:
-  - `MAIL_ADDRESS` — sender email
-  - `MAIL_PASSWORD` — SMTP password (or app password)
+```sh
+cp .env.example .env.local   # fill in the values
+pnpm install
+pnpm dev                     # http://localhost:3000
+```
 
-Scripts
+Environment variables (see `.env.example`):
 
-- `pnpm install` — install dependencies
-- `pnpm dev` — start Vite development server (opens app at `http://localhost:5173` by default)
-- `pnpm build` — build production assets
-- `pnpm preview` — preview production build locally
-- `pnpm test` — run unit tests with Vitest (if any)
-- `pnpm format` — run Prettier on source files
+| Variable | Purpose |
+|---|---|
+| `MAIL_ADDRESS`, `MAIL_PASSWORD` | SMTP sender and password/app password |
+| `SORTER_SECRET` | Encrypts the draw token; required for retries |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE` | Optional, default to Gmail:587 STARTTLS |
+| `ALLOWED_ORIGINS` | Optional comma-separated browser origins |
+| `RATE_LIMIT_MAX`, `RATE_LIMIT_WINDOW_MS` | Optional per-IP limits (default 8 / 10 min) |
 
-How it works
+Never commit real credentials. `.env*` is ignored; `.env.example` is safe.
 
-1. Open the app and fill the registration form (event name, date, price, participants).
-2. Click the `Sortear` / `Shuffle` button to run the assignment and trigger the `/api/email` endpoint.
-3. The serverless function will compute recipients and send an email to each participant with the assigned person.
+## How it works
 
-More about how assignments and emails work
+1. The organizer fills in the event and participants (with unique emails).
+2. `/api/email` validates the payload, draws a derangement on the server, seals
+   the draw into an `AES-256-GCM` token, sends one email per participant, and
+   replies with counts plus the token. The pairs are never returned or logged.
+3. If some emails fail, the UI offers “Reenviar N falha(s)”. `/api/retry`
+   decrypts the same token and resends **only** those recipients, so a failure
+   never changes the draw.
 
-- When you submit the form the backend performs a random assignment: each participant is assigned another participant to give a gift to. The algorithm ensures that participants are assigned fairly and (depending on the rule set) avoids assigning someone to themselves.
-- After the assignment is computed, the serverless function (`/api/email`) sends an individual email to each participant with the name and contact of the person they should give a gift to. Each participant receives only their own assignment — results are private and not shared with others.
-- Make sure all participant emails are correct before submitting; once the function sends emails the action cannot be undone by the UI. For testing, use a disposable SMTP (or your own inbox) to verify formatting and delivery.
+Couples or other “must not draw each other” pairs can be passed as
+`exclusions: [["a@example.com", "b@example.com"]]`; the sorter honors them and
+returns `422` when no valid draw exists. The UI picker for exclusions is not
+built yet, but the API and tests support them.
 
-Notes
+### Secrecy boundary
 
-- The UI supports a festive theme and includes an easter-egg "Santa mode" (click the header several times).
-- The email text and many UI strings were translated to Portuguese; you can revert or adapt the texts in `src/Components/RegistrationForm.tsx` and `api/email.ts`.
-- For deployment, this repo works well on Vercel — the `api/` folder maps to serverless functions automatically when deployed to Vercel.
+“Blind” means blind through the app and API. Whoever holds `SORTER_SECRET` (the
+server operator) can decrypt a token. Do not store the secret client-side.
 
-Security
+## Scripts
 
-- Do not commit SMTP credentials or other secrets to the repository. Use environment variables in your deployment platform.
+```sh
+pnpm dev             # Vite dev server
+pnpm build           # production bundle
+pnpm preview         # preview the build
+pnpm test            # run the suite once
+pnpm test:watch      # watch mode
+pnpm test:coverage   # enforce 100% statements/branches/functions/lines
+pnpm type-check      # tsc --noEmit
+pnpm format          # Prettier on src
+```
 
-Contributing
+## Structure
 
-- Fixes, improvements and translations are welcome. Open a PR against the `master` branch (or `feat/*` branches as used during development).
+- `src/` — React UI (`Components/RegistrationForm.tsx` is the whole form).
+- `Shared/business/Sorter.ts` — seeded, exclusion-aware derangement plus an
+  exact backtracking fallback; `Sorter.test.ts` property-tests the invariants.
+- `api/email.ts`, `api/retry.ts` — serverless handlers.
+- `api/_lib/` — validation, HTML-safe email rendering, AES-GCM tokens, and the
+  origin + sliding-window rate-limit guard.
 
-License
+## Security notes
 
-- This project does not include a license file. Add one if you plan to open-source it.
+- Emails are rendered with all user input HTML-escaped.
+- The API validates every field server-side (participant cap, unique emails,
+  price bounds, exclusion feasibility) and rejects non-POST requests.
+- `/api/email` and `/api/retry` check the browser origin and rate-limit per IP.
+  The limiter is in-memory per serverless instance; set `ALLOWED_ORIGINS` in
+  production.
+- Sends are sequential to stay under SMTP rate limits.
+
+## License
+
+This project does not include a license file. Add one if you plan to
+open-source it.
