@@ -1,5 +1,8 @@
-# pnpm 12 reads allowBuilds; pnpm 10 read onlyBuiltDependencies.
-# Keeping both makes a clean install work on either version.
+# The root package is the only workspace member. pnpm 9 requires a non-empty
+# packages list when this file exists; pnpm 10/12 read the build allow-list.
+packages:
+  - "."
+
 allowBuilds:
   esbuild: true
 onlyBuiltDependencies:
