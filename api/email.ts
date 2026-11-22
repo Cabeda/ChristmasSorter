@@ -1,114 +1,88 @@
-import { VercelRequest, VercelResponse } from "@vercel/node";
-import type { SorterEvent } from "../Shared/Interfaces/SorterEventAPI.Interface";
-import type { EmailList } from "../Shared/Interfaces/EmailList.interface";
-import { sortEventMembers } from "../Shared/business/Sorter.js";
-import { createTransport, SendMailOptions } from "nodemailer";
-
-function generateBody(
-  event: SorterEvent,
-  recipient: EmailList
-): SendMailOptions {
-  const currency = event.currency ? event.currency : "€";
-  const eventDate = new Date(event.date);
-  const formattedDate = eventDate.toLocaleDateString("pt-pt", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-
-  const textBody = [
-    `Olá ${recipient.from.name},`,
-    "",
-    `Você foi sorteado para o Amigo Secreto "${event.name}" em ${formattedDate}.`,
-    `Orçamento: ${event.giftPrice}${currency}`,
-    `Presente para: ${recipient.to.name} (${recipient.to.email})`,
-    "",
-    "Boas festas e boas trocas de presentes!",
-  ].join("\n");
-
-  const htmlBody = `
-    <p>Olá <strong>${recipient.from.name}</strong>,</p>
-    <p>Você foi sorteado para o <strong>Amigo Secreto</strong> <em>${event.name}</em> no dia <strong>${formattedDate}</strong>.</p>
-    <ul>
-      <li><strong>Orçamento:</strong> ${event.giftPrice}${currency}</li>
-      <li><strong>Presente para:</strong> ${recipient.to.name} (${recipient.to.email})</li>
-    </ul>
-    <p>Boas festas e boas trocas de presentes!</p>
-    <hr />
-    <p style="font-size:0.9em;color:#666;">Enviado por ${process.env.MAIL_ADDRESS}</p>
-  `;
-
-  const msg: SendMailOptions = {
-    from: process.env.MAIL_ADDRESS,
-    to: recipient.from.email,
-    subject: `${event.name} — Amigo Secreto`,
-    text: textBody,
-    html: htmlBody,
-  };
-
-  return msg;
-}
+import type { VercelRequest, VercelResponse } from "@vercel/node";
+import type { SendResult } from "../Shared/Interfaces/EmailResponse.interface";
+import {
+  InfeasibleAssignmentError,
+  InvalidParticipantsError,
+  sortEventMembers,
+} from "../Shared/business/Sorter.js";
+import { parseRequestBody } from "./_lib/body.js";
+import { HttpError, RateLimitError } from "./_lib/errors.js";
+import { assertAllowedOrigin, enforceRateLimit } from "./_lib/guard.js";
+import { createTransporter, sendAssignmentEmails } from "./_lib/mail.js";
+import { newRunId, sealToken } from "./_lib/token.js";
+import { validateEvent } from "./_lib/validation.js";
 
 export default async function handler(
-  _req: VercelRequest,
-  res: VercelResponse
-) {
-  // Parse body safely (some clients may send raw JSON strings)
-  let body: SorterEvent;
+  req: VercelRequest,
+  res: VercelResponse,
+): Promise<void> {
   try {
-    body = typeof _req.body === "string" ? JSON.parse(_req.body) : (_req.body as SorterEvent);
-  } catch (err) {
-    console.error("Invalid JSON body", err);
-    return res.status(400).json({ error: "Invalid JSON body" });
+    if (req.method !== "POST") {
+      throw new HttpError(405, "Method not allowed.");
+    }
+
+    assertAllowedOrigin(req);
+    enforceRateLimit(req, "email");
+
+    const event = validateEvent(parseRequestBody(req.body));
+
+    if (!process.env.MAIL_ADDRESS || !process.env.MAIL_PASSWORD) {
+      throw new HttpError(500, "Mail credentials not configured on server.");
+    }
+    if (!process.env.SORTER_SECRET) {
+      throw new HttpError(500, "SORTER_SECRET not configured on server.");
+    }
+
+    const assignments = sortEventMembers(event.participants, {
+      exclusions: event.exclusions,
+    });
+    const runId = newRunId();
+    const token = sealToken({
+      runId,
+      event: {
+        name: event.name,
+        date: event.date,
+        giftPrice: event.giftPrice,
+        currency: event.currency,
+      },
+      assignments,
+    });
+
+    const transporter = createTransporter();
+    try {
+      await transporter.verify();
+    } catch {
+      throw new HttpError(500, "SMTP configuration invalid.");
+    }
+
+    const outcome = await sendAssignmentEmails(transporter, event, assignments);
+    console.log(`[sorter] run=${runId} sent=${outcome.sent} failed=${outcome.failed.length}`);
+
+    const payload: SendResult = {
+      success: outcome.failed.length === 0,
+      runId,
+      token,
+      sent: outcome.sent,
+      failedCount: outcome.failed.length,
+      failures: outcome.failed,
+      deduped: event.deduped,
+    };
+    res.status(200).json(payload);
+  } catch (error) {
+    if (error instanceof HttpError) {
+      if (error instanceof RateLimitError) {
+        res.setHeader("Retry-After", String(error.retryAfter));
+      }
+      res.status(error.statusCode).json({ error: error.message });
+      return;
+    }
+
+    if (error instanceof InfeasibleAssignmentError || error instanceof InvalidParticipantsError) {
+      res.status(422).json({ error: error.message });
+      return;
+    }
+
+    console.error("[sorter] unexpected error", error);
+    res.status(500).json({ error: "Internal server error." });
   }
-
-  if (!body || !Array.isArray(body.participants) || body.participants.length === 0) {
-    return res.status(400).json({ error: "Invalid payload: participants array is required" });
-  }
-
-  if (!process.env.MAIL_ADDRESS || !process.env.MAIL_PASSWORD) {
-    console.error("Mail credentials not configured");
-    return res.status(500).json({ error: "Mail credentials not configured on server" });
-  }
-
-  // create reusable transporter object using the default SMTP transport
-  const transporter = createTransport({
-    host: "smtp.gmail.com",
-    port: 587,
-    secure: false,
-    auth: {
-      user: process.env.MAIL_ADDRESS,
-      pass: process.env.MAIL_PASSWORD,
-    },
-  });
-
-  try {
-    // verify connection configuration before attempting to send
-    await transporter.verify();
-  } catch (err) {
-    console.error("SMTP verify failed", err);
-    return res.status(500).json({ error: "SMTP configuration invalid" });
-  }
-
-  const emails = sortEventMembers(body.participants).map((member) =>
-    generateBody(body, member)
-  );
-
-  // send emails in parallel and collect results
-  const results = await Promise.allSettled(
-    emails.map((email) => transporter.sendMail(email))
-  );
-
-  const sent = results.filter((r) => r.status === "fulfilled").length;
-  const failed = results
-    .map((r, i) => ({ r, i }))
-    .filter(({ r }) => r.status === "rejected")
-    .map(({ r, i }) => ({ index: i, reason: (r as PromiseRejectedResult).reason?.toString() }));
-
-  if (failed.length > 0) {
-    console.error("Some emails failed to send", failed);
-  }
-
-  return res.status(200).json({ success: failed.length === 0, sent, failedCount: failed.length, failures: failed });
 }

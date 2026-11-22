@@ -1,0 +1,6 @@
+# pnpm 12 reads allowBuilds; pnpm 10 read onlyBuiltDependencies.
+# Keeping both makes a clean install work on either version.
+allowBuilds:
+  esbuild: true
+onlyBuiltDependencies:
+  - esbuild

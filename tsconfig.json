@@ -20,6 +20,6 @@
     "baseUrl": ".",
     "jsx": "react-jsx"
   },
-  "include": ["src/**/*", "Shared/**/*", "api/**/*", "scripts/**/*", "app.js"],
+  "include": ["src/**/*", "Shared/**/*", "api/**/*", "vitest.setup.ts"],
   "exclude": ["node_modules", "dist", "public", ".vercel"]
 }
