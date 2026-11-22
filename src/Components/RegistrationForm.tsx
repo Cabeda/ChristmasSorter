@@ -1,21 +1,24 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
-import { SubmitHandler, useFieldArray, useForm } from "react-hook-form";
-import { z } from "zod";
-import type { RetryResult, SendResult } from "../../Shared/Interfaces/EmailResponse.interface";
-import Member from "../../Shared/Interfaces/Member.interface";
-import SorterEvent from "../../Shared/Interfaces/SorterEvent.Interface";
-import { formatGiftPrice } from "../../Shared/business/currency";
-import { formatEventDate } from "../../Shared/business/date";
+import { useCallback, useState } from "react";
+import { useFieldArray, useForm } from "react-hook-form";
+import type { Resolver } from "react-hook-form";
+import type {
+  RetryResult,
+  SendResult,
+} from "../../Shared/Interfaces/EmailResponse.interface";
+import type SorterEvent from "../../Shared/Interfaces/SorterEvent.Interface";
+import { useDraft } from "../hooks/useDraft";
+import { useOnlineStatus } from "../hooks/useOnlineStatus";
+import { readDraft } from "../lib/draft";
+import {
+  DEFAULT_VALUES,
+  Schema,
+  type FormInputs,
+  type FormOutput,
+} from "../lib/formModel";
+import { ConfirmDialog } from "./ConfirmDialog";
+import { ParticipantRow } from "./ParticipantRow";
 import styles from "./RegistrationForm.module.css";
-
-type Inputs = {
-  eventName: string;
-  participants: Array<Member>;
-  eventDate: Date;
-  price: string;
-  currency: string;
-};
 
 type PendingRetry = {
   token: string;
@@ -23,48 +26,31 @@ type PendingRetry = {
   count: number;
 };
 
-const MemberSchema = z.object({
-  name: z.string().nonempty("Nome é obrigatório"),
-  email: z.string().email("Insira um e-mail válido"),
-});
-
-const Schema = z.object({
-  eventName: z.string().nonempty("Nome do evento é obrigatório"),
-  participants: z.array(MemberSchema).min(2, "Adicione pelo menos 2 participantes"),
-  eventDate: z.coerce.date(),
-  price: z.string().nonempty("Preço é obrigatório"),
-  currency: z.string().nonempty("Moeda é obrigatória"),
-});
+type StatusMessage = { type: "success" | "error"; text: string };
 
 export default function RegistrationForm() {
   const [submitting, setSubmitting] = useState(false);
-  const [statusMessage, setStatusMessage] = useState<null | { type: "success" | "error"; text: string }>(null);
+  const [statusMessage, setStatusMessage] = useState<StatusMessage | null>(null);
   const [clicks, setClicks] = useState(0);
   const [santaMode, setSantaMode] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
+  const [pendingSend, setPendingSend] = useState<FormOutput | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [pendingRetry, setPendingRetry] = useState<PendingRetry | null>(null);
   const [retrying, setRetrying] = useState(false);
+  const online = useOnlineStatus();
+
+  const [initialDraft] = useState(() => readDraft(window.localStorage));
 
   const {
     control,
     register,
     reset,
-    trigger,
-    getValues,
+    watch,
+    handleSubmit,
     formState: { errors },
-  } = useForm<Inputs>({
-    resolver: zodResolver(Schema) as any,
-    defaultValues: {
-      eventName: "Amigo Secreto",
-      eventDate: new Date(),
-      price: "5",
-      currency: "euro",
-      participants: [
-        { name: "", email: "" },
-        { name: "", email: "" },
-      ],
-    },
+  } = useForm<FormInputs, unknown, FormOutput>({
+    resolver: zodResolver(Schema) as unknown as Resolver<FormInputs, unknown, FormOutput>,
+    defaultValues: initialDraft ? initialDraft.values : DEFAULT_VALUES,
   });
 
   const { fields, append, remove } = useFieldArray({
@@ -72,14 +58,14 @@ export default function RegistrationForm() {
     name: "participants",
   });
 
-  useEffect(() => {
-    if (!showConfirm) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setShowConfirm(false);
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [showConfirm]);
+  const { hasDraft, notice, clearDraft, markSent } = useDraft(
+    { watch, reset },
+    DEFAULT_VALUES,
+    initialDraft,
+  );
+
+  const removeParticipant = useCallback((index: number) => remove(index), [remove]);
+  const handleCancel = useCallback(() => setPendingSend(null), []);
 
   const toggleSanta = () => {
     const next = clicks + 1;
@@ -90,7 +76,7 @@ export default function RegistrationForm() {
     }
   };
 
-  const onSubmit: SubmitHandler<Inputs> = async (data) => {
+  const send = async (data: FormOutput) => {
     setSubmitting(true);
     setStatusMessage(null);
     setPendingRetry(null);
@@ -98,7 +84,7 @@ export default function RegistrationForm() {
     const body: SorterEvent = {
       name: data.eventName,
       participants: data.participants,
-      date: new Date(data.eventDate),
+      date: data.eventDate,
       giftPrice: data.price,
       currency: data.currency,
       exclusions: [],
@@ -130,7 +116,7 @@ export default function RegistrationForm() {
           type: "success",
           text: santaMode ? "Ho Ho Ho! Convites enviados 🎅🎄" : "Convites enviados com sucesso.",
         });
-        reset();
+        markSent();
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : "";
@@ -143,18 +129,19 @@ export default function RegistrationForm() {
     }
   };
 
-  const openConfirm = async () => {
-    const valid = await trigger();
-    if (valid) setShowConfirm(true);
+  const onValid = (data: FormOutput) => {
+    if (!online) return;
+    setPendingSend(data);
   };
 
   const handleConfirm = async () => {
+    const values = pendingSend as FormOutput;
     setConfirmLoading(true);
     try {
-      await onSubmit(getValues() as Inputs);
+      await send(values);
     } finally {
       setConfirmLoading(false);
-      setShowConfirm(false);
+      setPendingSend(null);
     }
   };
 
@@ -198,159 +185,181 @@ export default function RegistrationForm() {
 
   return (
     <form
-      onSubmit={(event) => {
-        event.preventDefault();
-        void openConfirm();
-      }}
+      onSubmit={handleSubmit(onValid)}
       className={`${styles.form} ${santaMode ? styles.santaMode : ""}`}
       noValidate
     >
-      <div
-        className={styles.header}
-        onClick={toggleSanta}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            toggleSanta();
-          }
-        }}
-        role="button"
-        tabIndex={0}
-        aria-label="Cabeçalho festivo"
-      >
-        <h2 className={styles.title}>🎄 Registro do Amigo Secreto</h2>
-        <p className={styles.subtitle}>Organize seu Amigo Secreto de forma rápida e divertida</p>
-        <div className={styles.ornament} aria-hidden>⚪️</div>
-      </div>
-
-      <div className={styles.snow} aria-hidden>
-        <span className={styles.snowflake}>❄</span>
-        <span className={styles.snowflake}>❄</span>
-        <span className={styles.snowflake}>❄</span>
-      </div>
-
-      <fieldset className={styles.fieldset}>
-        <label htmlFor="eventName">Nome do evento</label>
-        <input
-          id="eventName"
-          aria-invalid={Boolean(errors.eventName)}
-          aria-describedby={errors.eventName ? "eventName-error" : undefined}
-          className={`${styles.input} ${errors.eventName ? styles.error : ""}`}
-          {...register("eventName")}
-        />
-        {errors.eventName && (
-          <p id="eventName-error" className={styles.fieldError} role="alert">
-            {errors.eventName.message}
+      <div className={styles.formHeader}>
+        <div>
+          <h2 className={styles.title}>Ficha do sorteio</h2>
+          <p className={styles.subtitle}>
+            Preencha a ficha, confira os dados e envie. O sorteio é confidencial.
           </p>
-        )}
-      </fieldset>
-
-      <fieldset className={styles.fieldset}>
-        <label htmlFor="eventDate">Data do evento</label>
-        <input
-          id="eventDate"
-          type="date"
-          aria-invalid={Boolean(errors.eventDate)}
-          className={`${styles.input} ${errors.eventDate ? styles.error : ""}`}
-          {...register("eventDate")}
-        />
-        {errors.eventDate && <p className={styles.fieldError}>{errors.eventDate.message}</p>}
-      </fieldset>
-
-      <fieldset className={styles.fieldset}>
-        <label htmlFor="price">Preço máximo</label>
-        <input
-          id="price"
-          type="number"
-          inputMode="numeric"
-          min={0}
-          aria-invalid={Boolean(errors.price)}
-          className={`${styles.input} ${errors.price ? styles.error : ""}`}
-          {...register("price")}
-        />
-        {errors.price && <p className={styles.fieldError}>{errors.price.message}</p>}
-        <p className={styles.hint}>Digite apenas números — sem símbolos (ex: 20)</p>
-      </fieldset>
-
-      <fieldset className={styles.fieldset}>
-        <label htmlFor="currency">Moeda</label>
-        <select
-          id="currency"
-          className={`${styles.input} ${errors.currency ? styles.error : ""}`}
-          {...register("currency")}
-        >
-          <option value="euro">Euro (€)</option>
-          <option value="dollar">Dólar ($)</option>
-          <option value="pound">Libra (£)</option>
-        </select>
-        {errors.currency && <p className={styles.fieldError}>{errors.currency.message}</p>}
-      </fieldset>
-
-      <div className={styles.participantHeader}>
-        <label>Participantes</label>
+        </div>
         <button
           type="button"
-          className={styles.iconButton}
-          onClick={() => append({ name: "", email: "" })}
-          aria-label="Adicionar participante"
+          className={styles.santaButton}
+          onClick={toggleSanta}
+          aria-pressed={santaMode}
+          aria-label="Cabeçalho festivo"
+          title="Cabeçalho festivo"
         >
-          ➕
+          <span aria-hidden>{santaMode ? "🎅" : "★"}</span>
         </button>
       </div>
 
-      {fields.map((field, index) => {
-        const participantErrors = errors.participants?.[index];
-        return (
-          <section className={styles.participant} key={field.id}>
-            <div className={styles.row} role="group" aria-label={`Participante ${index + 1}`}>
-              <label htmlFor={`p-name-${index}`} className={styles.visuallyHidden}>
-                Nome do participante {index + 1}
-              </label>
-              <input
-                id={`p-name-${index}`}
-                placeholder="Nome"
-                className={`${styles.input} ${participantErrors?.name ? styles.error : ""}`}
-                {...register(`participants.${index}.name` as const)}
-              />
-              <label htmlFor={`p-email-${index}`} className={styles.visuallyHidden}>
-                E-mail do participante {index + 1}
-              </label>
-              <input
-                id={`p-email-${index}`}
-                placeholder="E-mail"
-                className={`${styles.input} ${participantErrors?.email ? styles.error : ""}`}
-                {...register(`participants.${index}.email` as const)}
-              />
-              <button
-                type="button"
-                className={styles.deleteButton}
-                onClick={() => remove(index)}
-                aria-label={`Remover participante ${index + 1}`}
-              >
-                Remover
-              </button>
-            </div>
+      <fieldset className={styles.section}>
+        <legend className={styles.legend}>
+          <span className={styles.step} aria-hidden>
+            01
+          </span>
+          O evento
+        </legend>
 
-            {participantErrors && (
-              <div className={styles.fieldError} role="alert">
-                {participantErrors.name?.message}
-                {participantErrors.email?.message && <div>{participantErrors.email.message}</div>}
-              </div>
+        <div className={styles.field}>
+          <label htmlFor="eventName">Nome do evento</label>
+          <input
+            id="eventName"
+            autoComplete="off"
+            aria-invalid={Boolean(errors.eventName)}
+            aria-describedby={errors.eventName ? "eventName-error" : undefined}
+            className={`${styles.input} ${errors.eventName ? styles.inputError : ""}`}
+            {...register("eventName")}
+          />
+          {errors.eventName && (
+            <p id="eventName-error" className={styles.fieldError} role="alert">
+              {errors.eventName.message}
+            </p>
+          )}
+        </div>
+
+        <div className={styles.field}>
+          <label htmlFor="eventDate">Data do evento</label>
+          <input
+            id="eventDate"
+            type="date"
+            aria-invalid={Boolean(errors.eventDate)}
+            aria-describedby={errors.eventDate ? "eventDate-error" : undefined}
+            className={`${styles.input} ${errors.eventDate ? styles.inputError : ""}`}
+            {...register("eventDate")}
+          />
+          {errors.eventDate && (
+            <p id="eventDate-error" className={styles.fieldError} role="alert">
+              {errors.eventDate.message}
+            </p>
+          )}
+        </div>
+      </fieldset>
+
+      <fieldset className={styles.section}>
+        <legend className={styles.legend}>
+          <span className={styles.step} aria-hidden>
+            02
+          </span>
+          O presente
+        </legend>
+
+        <div className={styles.giftGrid}>
+          <div className={styles.field}>
+            <label htmlFor="price">Preço máximo</label>
+            <input
+              id="price"
+              type="number"
+              inputMode="numeric"
+              min={0}
+              aria-invalid={Boolean(errors.price)}
+              aria-describedby={errors.price ? "price-error" : "price-hint"}
+              className={`${styles.input} ${errors.price ? styles.inputError : ""}`}
+              {...register("price")}
+            />
+            {errors.price && (
+              <p id="price-error" className={styles.fieldError} role="alert">
+                {errors.price.message}
+              </p>
             )}
-          </section>
-        );
-      })}
+            <p id="price-hint" className={styles.hint}>
+              Só números, sem símbolos. Exemplo: 20
+            </p>
+          </div>
 
-      {errors.participants?.root && (
-        <p className={styles.fieldError}>{errors.participants.root.message}</p>
+          <div className={styles.field}>
+            <label htmlFor="currency">Moeda</label>
+            <select
+              id="currency"
+              aria-invalid={Boolean(errors.currency)}
+              aria-describedby={errors.currency ? "currency-error" : undefined}
+              className={`${styles.input} ${styles.select} ${errors.currency ? styles.inputError : ""}`}
+              {...register("currency")}
+            >
+              <option value="euro">Euro (€)</option>
+              <option value="dollar">Dólar ($)</option>
+              <option value="pound">Libra (£)</option>
+            </select>
+            {errors.currency && (
+              <p id="currency-error" className={styles.fieldError} role="alert">
+                {errors.currency.message}
+              </p>
+            )}
+          </div>
+        </div>
+      </fieldset>
+
+      <section className={styles.section} aria-labelledby="participants-title">
+        <div className={styles.participantToolbar}>
+          <h3 id="participants-title" className={styles.legend}>
+            <span className={styles.step} aria-hidden>
+              03
+            </span>
+            Participantes
+          </h3>
+          <button
+            type="button"
+            className={styles.addButton}
+            onClick={() => append({ name: "", email: "" })}
+            aria-label="Adicionar participante"
+          >
+            <span aria-hidden>+</span>
+            Adicionar
+          </button>
+        </div>
+
+        <div className={styles.participantList}>
+          {fields.map((field, index) => {
+            const participantErrors = errors.participants?.[index];
+            return (
+              <ParticipantRow
+                key={field.id}
+                index={index}
+                register={register}
+                onRemove={removeParticipant}
+                nameError={participantErrors?.name?.message}
+                emailError={participantErrors?.email?.message}
+              />
+            );
+          })}
+        </div>
+
+        {errors.participants?.root && (
+          <p className={styles.fieldError} role="alert">
+            {errors.participants.root.message}
+          </p>
+        )}
+      </section>
+
+      {!online && (
+        <div id="offline-message" className={styles.offline} role="status" aria-live="polite">
+          <strong>Sem ligação à internet.</strong> O rascunho continua guardado neste
+          dispositivo. O envio volta a ficar disponível assim que a ligação regressar.
+        </div>
       )}
 
       <div className={styles.actions}>
         <button
           type="submit"
           className={styles.primary}
-          disabled={submitting || pendingRetry !== null}
+          disabled={submitting || pendingRetry !== null || !online}
           aria-busy={submitting}
+          aria-describedby={!online ? "offline-message" : undefined}
         >
           {submitting
             ? santaMode
@@ -363,60 +372,18 @@ export default function RegistrationForm() {
       </div>
 
       {pendingRetry && (
-        <div className={styles.actions}>
+        <div className={styles.retryBox}>
+          <p className={styles.retryCopy}>
+            {pendingRetry.count} convite(s) não chegaram. Pode reenviar apenas esses.
+          </p>
           <button
             type="button"
-            className={styles.deleteButton}
+            className={styles.secondaryButton}
             onClick={() => void handleRetry(pendingRetry)}
             disabled={retrying}
           >
             {retrying ? "Reenviando..." : `Reenviar ${pendingRetry.count} falha(s)`}
           </button>
-        </div>
-      )}
-
-      <p className={styles.hint}>
-        Ao enviar, o sistema fará o sorteio aleatório e enviará, por e-mail, para cada participante a pessoa que lhe foi atribuída. Os resultados são confidenciais — cada participante só recebe o seu próprio destinatário.
-      </p>
-
-      {showConfirm && (
-        <div className={styles.modalOverlay} onClick={() => setShowConfirm(false)}>
-          <div
-            className={styles.modal}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="confirm-title"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <h3 id="confirm-title" className={styles.modalHeader}>Confirmar envio</h3>
-            <div className={styles.modalBody}>
-              <p>Você está prestes a enviar e-mails para os participantes com os resultados do sorteio. Confirme os detalhes abaixo:</p>
-              <ul>
-                <li><strong>Evento:</strong> {getValues().eventName}</li>
-                <li><strong>Data:</strong> {formatEventDate(new Date(getValues().eventDate).toISOString())}</li>
-                <li><strong>Participantes:</strong> {getValues().participants.length}</li>
-                <li><strong>Preço máximo:</strong> {formatGiftPrice(getValues().price, getValues().currency)}</li>
-              </ul>
-            </div>
-            <div className={styles.modalActions}>
-              <button
-                type="button"
-                className={styles.deleteButton}
-                onClick={() => setShowConfirm(false)}
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                className={styles.primary}
-                onClick={() => void handleConfirm()}
-                disabled={confirmLoading}
-                autoFocus
-              >
-                {confirmLoading ? "Enviando..." : "Confirmar e enviar"}
-              </button>
-            </div>
-          </div>
         </div>
       )}
 
@@ -432,6 +399,42 @@ export default function RegistrationForm() {
         >
           {statusMessage.text}
         </div>
+      )}
+
+      <div className={styles.ticket}>
+        <p className={styles.hint}>
+          <strong>Como funciona:</strong> ao enviar, o sistema faz o sorteio
+          aleatório e manda por e-mail o nome do amigo secreto de cada pessoa. Os
+          resultados são confidenciais — cada participante só recebe o seu.
+        </p>
+        <span className={styles.ticketStamp} aria-hidden>
+          confidencial
+        </span>
+      </div>
+
+      {(hasDraft || notice === "cleared") && (
+        <div className={styles.draftBar}>
+          <p className={styles.draftText} aria-live="polite">
+            {notice === "restored" && "Rascunho restaurado neste dispositivo."}
+            {notice === "synced" && "Rascunho sincronizado de outra aba."}
+            {notice === "saved" && "Rascunho guardado automaticamente."}
+            {notice === "cleared" && "Rascunho limpo."}
+          </p>
+          {hasDraft && (
+            <button type="button" className={styles.draftClear} onClick={clearDraft}>
+              Limpar rascunho
+            </button>
+          )}
+        </div>
+      )}
+
+      {pendingSend && (
+        <ConfirmDialog
+          values={pendingSend}
+          loading={confirmLoading}
+          onCancel={handleCancel}
+          onConfirm={() => void handleConfirm()}
+        />
       )}
     </form>
   );

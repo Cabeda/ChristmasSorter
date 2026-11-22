@@ -35,12 +35,14 @@ async function openConfirm(user: UserEvent): Promise<void> {
 beforeEach(() => {
   fetchMock.mockReset();
   vi.stubGlobal("fetch", fetchMock);
+  window.localStorage.clear();
 });
 
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   vi.clearAllMocks();
+  window.localStorage.clear();
 });
 
 describe("RegistrationForm", () => {

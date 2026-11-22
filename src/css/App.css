@@ -1,132 +1,175 @@
-body {
-  background: linear-gradient(180deg,#fff7f7,#f7fbff);
-}
+/* Page shell, marquee masthead, and the snow layer. */
 
-.App-logo {
-  animation: App-logo-spin infinite 20s linear;
-  height: 10vmin;
-}
-
-.App-header {
-  background-color: #b30000;
-  min-height: 12vh;
+.page {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+  min-height: 100svh;
+  padding:
+    max(20px, env(safe-area-inset-top))
+    max(12px, env(safe-area-inset-right))
+    max(30px, env(safe-area-inset-bottom))
+    max(12px, env(safe-area-inset-left));
+  isolation: isolate;
 }
 
-.App-link {
-  color: #61dafb;
+/* One composited layer, animated with transform only. */
+.page__snow {
+  position: fixed;
+  inset: -120px 0 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.55;
+  background-image:
+    radial-gradient(2px 2px at 12% 18%, rgba(255, 255, 255, 0.85), transparent 60%),
+    radial-gradient(1.6px 1.6px at 34% 62%, rgba(255, 255, 255, 0.7), transparent 60%),
+    radial-gradient(2.4px 2.4px at 57% 27%, rgba(255, 255, 255, 0.8), transparent 60%),
+    radial-gradient(1.4px 1.4px at 73% 78%, rgba(255, 255, 255, 0.65), transparent 60%),
+    radial-gradient(2px 2px at 88% 44%, rgba(255, 255, 255, 0.75), transparent 60%),
+    radial-gradient(1.5px 1.5px at 22% 88%, rgba(255, 255, 255, 0.6), transparent 60%);
+  background-size: 260px 260px;
+  animation: snowfall 26s linear infinite;
 }
 
-@keyframes App-logo-spin {
+@keyframes snowfall {
   from {
-    transform: rotate(0deg);
+    transform: translate3d(0, 0, 0);
   }
   to {
-    transform: rotate(360deg);
+    transform: translate3d(0, 260px, 0);
   }
 }
 
-html {
-  box-sizing: border-box;
-  font-size: 16px;
-}
-
-*,
-*:after,
-*:before {
-  box-sizing: border-box;
-}
-
-Form {
-  padding: 2rem;
-  margin-top: 2rem;
-  margin-right: auto;
-  margin-left: auto;
-  max-width: 42rem;
-  background-color: #fff;
-  border-radius: 12px;
-  box-shadow: 0 12px 30px rgba(0,0,0,0.12), 0 4px 10px rgba(0,0,0,0.06);
-}
-
-h1 {
-  margin-top: 0;
-  /* margin-bottom: 3.236rem; */
+.masthead {
+  position: relative;
+  width: min(100%, 880px);
+  margin-bottom: clamp(22px, 4vw, 38px);
   text-align: center;
-  font-size: 1.618rem;
 }
 
-.form-group {
-  padding: 0;
-  border: 0;
-}
-.form-group + .form-group {
-  margin-top: 1rem;
-}
-
-label {
-  display: inline-block;
-  margin-bottom: .5rem;
-  font-size: .75rem;
-  text-transform: uppercase;
-  touch-action: manipulation;
+.masthead__bulbs {
+  display: flex;
+  justify-content: center;
+  gap: clamp(9px, 2.6vw, 24px);
+  margin-bottom: clamp(14px, 2.4vw, 22px);
 }
 
-Input,
-textarea {
-  display: block;
-  padding: .75rem 1rem;
-  width: 100%;
-  font-size: 1rem;
-  line-height: 1.4;
-  color: #222;
-  background-color: #fff;
-  background-image: none;
-  background-clip: padding-box;
-  border: 1px solid #e6e6e6;
-  border-radius: 10px;
-  transition: box-shadow 240ms ease, transform 160ms ease, border-color 160ms ease;
-}
-Input:focus,
-textarea:focus {
-  outline: 0;
-  border-color: #b30000;
-  box-shadow: 0 6px 18px rgba(179,0,0,0.12);
-  transform: translateY(-1px);
+.masthead__bulb {
+  width: clamp(7px, 1.3vw, 11px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fffbe6 0%, var(--gold) 48%, var(--gold-deep) 100%);
+  box-shadow:
+    0 0 9px 2px rgba(240, 193, 75, 0.6),
+    0 0 24px 7px rgba(240, 193, 75, 0.2);
+  animation: bulb-twinkle 1.9s ease-in-out infinite;
+  animation-delay: var(--delay, 0ms);
 }
 
-textarea {
-  resize: vertical;
+@keyframes bulb-twinkle {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
 }
 
-button {
-  display: inline-block;
-  padding: .75rem 1rem;
-  margin-top: 1.618rem;
+.masthead__kicker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(10px, 2.2vw, 18px);
+  margin: 0 0 clamp(10px, 2vw, 16px);
+  font-family: var(--font-display);
+  font-size: clamp(0.62rem, 1.7vw, 0.78rem);
   font-weight: 400;
-  text-align: center;
+  letter-spacing: 0.26em;
   text-transform: uppercase;
-  color: #fff;
-  vertical-align: middle;
-  white-space: nowrap;
-  background-color: #ffab00;
-  border: 1px solid transparent;
-  box-shadow: 0 15px 35px rgba(50, 50, 93, 0.1), 0 5px 15px rgba(0, 0, 0, 0.07);
-  cursor: pointer;
-  -webkit-user-select: none;
-     -moz-user-select: none;
-      -ms-user-select: none;
-          user-select: none;
-  transition: all 0.25s cubic-bezier(0.4, 0, 1, 1);
+  color: var(--gold);
 }
-button:focus, button:hover {
-  background-color: #ffc142;
-  box-shadow: 0 18px 35px rgba(50, 50, 93, 0.1), 0 8px 15px rgba(0, 0, 0, 0.07);
+
+.masthead__kicker::before,
+.masthead__kicker::after {
+  content: "";
+  width: clamp(22px, 9vw, 88px);
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--gold));
 }
-button:focus {
-  outline: 0;
+
+.masthead__kicker::after {
+  background: linear-gradient(90deg, var(--gold), transparent);
+}
+
+.masthead__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 7vw, 3.8rem);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0.005em;
+  text-transform: uppercase;
+  color: var(--cream);
+  text-wrap: balance;
+  text-shadow:
+    0 2px 0 var(--red-deep),
+    0 5px 0 #4e070d,
+    0 16px 28px rgba(0, 0, 0, 0.55);
+}
+
+.masthead__title span {
+  color: var(--gold);
+  text-shadow:
+    0 2px 0 var(--red-deep),
+    0 5px 0 #4e070d,
+    0 16px 28px rgba(0, 0, 0, 0.55);
+}
+
+.masthead__sub {
+  max-width: 46ch;
+  margin: clamp(12px, 2vw, 18px) auto 0;
+  font-size: clamp(0.95rem, 2.4vw, 1.08rem);
+  line-height: 1.5;
+  color: #cfe3d6;
+  text-wrap: balance;
+}
+
+.masthead__tinsel {
+  width: min(100%, 720px);
+  height: clamp(26px, 4.6vw, 42px);
+  margin: clamp(10px, 2vw, 18px) auto 0;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.35));
+}
+
+.page__main {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.page__footer {
+  margin-top: clamp(22px, 4vw, 36px);
+  text-align: center;
+}
+
+.page__footer p {
+  margin: 0;
+  font-size: 0.78rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #9db8a8;
+}
+
+@media (max-width: 380px) {
+  .masthead__bulbs {
+    gap: 8px;
+  }
+
+  .masthead__kicker {
+    letter-spacing: 0.18em;
+  }
 }
