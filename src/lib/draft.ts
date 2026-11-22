@@ -82,9 +82,7 @@ export function readDraft(storage: Storage | null): Draft | null {
   }
   if (raw === null) return null;
 
-  const draft = parseDraft(raw);
-  if (draft === null) removeDraft(storage);
-  return draft;
+  return parseDraft(raw);
 }
 
 /** Persist a draft and report whether the storage write actually happened. */

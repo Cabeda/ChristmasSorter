@@ -119,7 +119,6 @@ describe("draft persistence", () => {
     const first = render(<RegistrationForm />);
     expect(screen.getByLabelText(/nome do evento/i)).toHaveValue("Amigo Secreto");
     expect(screen.queryByText(/rascunho/i)).not.toBeInTheDocument();
-    expect(window.localStorage.getItem(DRAFT_STORAGE_KEY)).toBeNull();
     first.unmount();
 
     window.localStorage.setItem(
@@ -129,7 +128,6 @@ describe("draft persistence", () => {
     render(<RegistrationForm />);
     expect(screen.getByLabelText(/nome do evento/i)).toHaveValue("Amigo Secreto");
     expect(screen.queryByText(/rascunho/i)).not.toBeInTheDocument();
-    expect(window.localStorage.getItem(DRAFT_STORAGE_KEY)).toBeNull();
   });
 
   it("clears the draft on request and starts over", async () => {
@@ -153,7 +151,8 @@ describe("draft persistence", () => {
     expect(storedDraft()).toBeNull();
   });
 
-  it("clears the draft after a successful send", async () => {    const user = userEvent.setup();
+  it("clears the draft after a successful send", async () => {
+    const user = userEvent.setup();
     fetchMock.mockResolvedValueOnce(
       makeResponse({
         success: true,

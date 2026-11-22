@@ -135,10 +135,9 @@ describe("readDraft", () => {
     expect(readDraft(storage)?.values).toEqual(values);
   });
 
-  it("removes an invalid draft", () => {
+  it("ignores an invalid draft", () => {
     const storage = memoryStorage({ [DRAFT_STORAGE_KEY]: "{broken" });
     expect(readDraft(storage)).toBeNull();
-    expect(storage.getItem(DRAFT_STORAGE_KEY)).toBeNull();
   });
 
   it("returns null when storage throws", () => {
