@@ -25,6 +25,11 @@
     "lint:commit": "commitlint --from=HEAD~1",
     "type-check": "tsc --noEmit"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  },
   "eslintConfig": {
     "extends": "react-app"
   },
