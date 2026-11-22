@@ -16,3 +16,16 @@ export function formatEventDate(iso: string): string {
     timeZone: "UTC",
   });
 }
+
+/**
+ * Turn a date into the `YYYY-MM-DD` string an `<input type="date">` expects.
+ *
+ * @param date Date to format.
+ * @returns The input value, or an empty string for an invalid date.
+ */
+export function toDateInputValue(date: Date): string {
+  if (Number.isNaN(date.getTime())) return "";
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
