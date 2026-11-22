@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   DRAFT_STORAGE_KEY,
   DRAFT_VERSION,
+  getStorage,
   parseDraft,
   readDraft,
   removeDraft,
@@ -120,6 +121,10 @@ describe("parseDraft", () => {
 });
 
 describe("readDraft", () => {
+  it("returns null without storage", () => {
+    expect(readDraft(null)).toBeNull();
+  });
+
   it("returns null when nothing is stored", () => {
     expect(readDraft(memoryStorage())).toBeNull();
   });
@@ -130,12 +135,36 @@ describe("readDraft", () => {
     expect(readDraft(storage)?.values).toEqual(values);
   });
 
+  it("removes an invalid draft", () => {
+    const storage = memoryStorage({ [DRAFT_STORAGE_KEY]: "{broken" });
+    expect(readDraft(storage)).toBeNull();
+    expect(storage.getItem(DRAFT_STORAGE_KEY)).toBeNull();
+  });
+
   it("returns null when storage throws", () => {
     expect(readDraft(brokenStorage(new Error("denied")))).toBeNull();
   });
 });
 
+describe("getStorage", () => {
+  it("returns localStorage when available", () => {
+    expect(getStorage()).toBe(window.localStorage);
+  });
+
+  it("returns null when the browser denies storage", () => {
+    const spy = vi.spyOn(window, "localStorage", "get").mockImplementation(() => {
+      throw new Error("denied");
+    });
+    expect(getStorage()).toBeNull();
+    spy.mockRestore();
+  });
+});
+
 describe("writeDraft", () => {
+  it("returns false without storage", () => {
+    expect(writeDraft(null, values)).toBe(false);
+  });
+
   it("stores the version, timestamp, and values", () => {
     const storage = memoryStorage();
     expect(writeDraft(storage, values, 123)).toBe(true);
@@ -158,6 +187,10 @@ describe("writeDraft", () => {
 });
 
 describe("removeDraft", () => {
+  it("does not throw without storage", () => {
+    expect(() => removeDraft(null)).not.toThrow();
+  });
+
   it("removes the stored draft", () => {
     const storage = memoryStorage();
     writeDraft(storage, values);

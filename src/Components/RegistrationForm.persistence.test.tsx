@@ -114,10 +114,12 @@ describe("draft persistence", () => {
     expect(storedDraft()).toBeNull();
   });
 
-  it("ignores corrupt and old drafts instead of crashing", () => {    window.localStorage.setItem(DRAFT_STORAGE_KEY, "{not-json");
+  it("ignores corrupt and old drafts instead of crashing", () => {
+    window.localStorage.setItem(DRAFT_STORAGE_KEY, "{not-json");
     const first = render(<RegistrationForm />);
     expect(screen.getByLabelText(/nome do evento/i)).toHaveValue("Amigo Secreto");
     expect(screen.queryByText(/rascunho/i)).not.toBeInTheDocument();
+    expect(window.localStorage.getItem(DRAFT_STORAGE_KEY)).toBeNull();
     first.unmount();
 
     window.localStorage.setItem(
@@ -127,6 +129,7 @@ describe("draft persistence", () => {
     render(<RegistrationForm />);
     expect(screen.getByLabelText(/nome do evento/i)).toHaveValue("Amigo Secreto");
     expect(screen.queryByText(/rascunho/i)).not.toBeInTheDocument();
+    expect(window.localStorage.getItem(DRAFT_STORAGE_KEY)).toBeNull();
   });
 
   it("clears the draft on request and starts over", async () => {
@@ -142,15 +145,15 @@ describe("draft persistence", () => {
 
     expect(storedDraft()).toBeNull();
     expect(screen.getByLabelText(/nome do evento/i)).toHaveValue("Amigo Secreto");
+    expect(screen.getByLabelText(/nome do evento/i)).toHaveFocus();
     expect(screen.getByText("Rascunho limpo.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Limpar rascunho" })).not.toBeInTheDocument();
 
-    await new Promise((resolve) => setTimeout(resolve, 400));
+    act(() => window.dispatchEvent(new Event("pagehide")));
     expect(storedDraft()).toBeNull();
   });
 
-  it("clears the draft after a successful send", async () => {
-    const user = userEvent.setup();
+  it("clears the draft after a successful send", async () => {    const user = userEvent.setup();
     fetchMock.mockResolvedValueOnce(
       makeResponse({
         success: true,
@@ -170,6 +173,39 @@ describe("draft persistence", () => {
     await openConfirm(user);
     await user.click(screen.getByRole("button", { name: "Confirmar e enviar" }));
     await screen.findByRole("status");
+
+    expect(storedDraft()).toBeNull();
+    expect(screen.getByLabelText(/nome do evento/i)).toHaveValue("Amigo Secreto");
+  });
+
+  it("clears the draft after retries finish delivery", async () => {
+    const user = userEvent.setup();
+    fetchMock
+      .mockResolvedValueOnce(
+        makeResponse({
+          success: false,
+          runId: "run-1",
+          token: "token-1",
+          sent: 1,
+          failedCount: 1,
+          failures: [{ email: "ana@example.com", reason: "down" }],
+          deduped: 0,
+        }),
+      )
+      .mockResolvedValueOnce(
+        makeResponse({ success: true, runId: "run-1", sent: 1, failedCount: 0, failures: [] }),
+      );
+
+    render(<RegistrationForm />);
+    await fillValidForm(user);
+    await vi.waitFor(() => expect(storedDraft()).not.toBeNull());
+    await openConfirm(user);
+    await user.click(screen.getByRole("button", { name: "Confirmar e enviar" }));
+    await screen.findByRole("status");
+
+    expect(storedDraft()).not.toBeNull();
+    await user.click(screen.getByRole("button", { name: "Reenviar 1 falha(s)" }));
+    await screen.findByText("Reenvio concluído.");
 
     expect(storedDraft()).toBeNull();
     expect(screen.getByLabelText(/nome do evento/i)).toHaveValue("Amigo Secreto");
@@ -224,8 +260,7 @@ describe("offline behaviour", () => {
     fireEvent.change(screen.getByLabelText(/nome do evento/i), {
       target: { value: "Sem rede" },
     });
-    await vi.waitFor(() => expect(storedDraft()).not.toBeNull());
-    expect(storedDraft()?.values.eventName).toBe("Sem rede");
+    await vi.waitFor(() => expect(storedDraft()?.values.eventName).toBe("Sem rede"));
 
     act(() => window.dispatchEvent(new Event("online")));
 
@@ -262,6 +297,21 @@ describe("multi-tab sync", () => {
     expect(screen.getByLabelText(/nome do evento/i)).toHaveValue("Amigo Secreto");
     expect(screen.queryByText(/Rascunho sincronizado/)).not.toBeInTheDocument();
   });
+
+  it("clears the form when another tab removes the draft", () => {
+    render(<RegistrationForm />);
+    dispatchDraft(otherTabDraft);
+    expect(screen.getByLabelText(/nome do evento/i)).toHaveValue("Natal da firma");
+
+    act(() => {
+      window.dispatchEvent(
+        new StorageEvent("storage", { key: DRAFT_STORAGE_KEY, newValue: null }),
+      );
+    });
+
+    expect(screen.getByLabelText(/nome do evento/i)).toHaveValue("Amigo Secreto");
+    expect(screen.getByText("Rascunho limpo.")).toBeInTheDocument();
+  });
 });
 
 describe("confirmation dialog focus", () => {
@@ -286,6 +336,10 @@ describe("confirmation dialog focus", () => {
 
     await user.tab();
     expect(confirm).toHaveFocus();
+
+    (document.activeElement as HTMLElement).blur();
+    await user.tab();
+    expect(cancel).toHaveFocus();
 
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();

@@ -74,6 +74,7 @@ describe("RegistrationForm", () => {
     const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string);
     expect(body.currency).toBe("euro");
     expect(body.exclusions).toEqual([]);
+    expect(body.date).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
 
   it("shows the sending state while the request is in flight", async () => {
@@ -89,6 +90,16 @@ describe("RegistrationForm", () => {
     const sending = screen.getAllByRole("button", { name: "Enviando..." });
     expect(sending).toHaveLength(2);
     for (const button of sending) expect(button).toBeDisabled();
+
+    await user.keyboard("{Escape}");
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    const overlay = screen.getByRole("dialog").parentElement as HTMLElement;
+    fireEvent.click(overlay);
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    await user.tab();
+    expect(screen.getByRole("dialog")).toHaveFocus();
 
     pending.resolve(
       makeResponse({
@@ -161,6 +172,7 @@ describe("RegistrationForm", () => {
     expect(screen.getByText("Nome do evento é obrigatório")).toBeInTheDocument();
     expect(screen.getByText("Preço é obrigatório")).toBeInTheDocument();
     expect(screen.getByText("Moeda é obrigatória")).toBeInTheDocument();
+    expect(screen.getByText("Data inválida")).toBeInTheDocument();
     expect(screen.getAllByText("Nome é obrigatório")).toHaveLength(2);
     expect(screen.getAllByText("Insira um e-mail válido")).toHaveLength(2);
     expect(screen.getByLabelText(/data do evento/i)).toHaveAttribute("aria-invalid", "true");

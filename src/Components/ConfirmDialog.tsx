@@ -16,20 +16,43 @@ interface ConfirmDialogProps {
  * focus to the control that opened it.
  */
 export function ConfirmDialog({ values, loading, onCancel, onConfirm }: ConfirmDialogProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
   const confirmRef = useRef<HTMLButtonElement>(null);
+  const loadingRef = useRef(loading);
+
+  useEffect(() => {
+    loadingRef.current = loading;
+  }, [loading]);
+
+  const requestCancel = useCallback(() => {
+    if (loadingRef.current) return;
+    onCancel();
+  }, [onCancel]);
 
   const onKeyDown = useCallback(
     (event: KeyboardEvent) => {
       if (event.key === "Escape") {
+        if (loadingRef.current) return;
         event.preventDefault();
         onCancel();
         return;
       }
       if (event.key !== "Tab") return;
 
+      if (loadingRef.current) {
+        event.preventDefault();
+        (dialogRef.current as HTMLDivElement).focus();
+        return;
+      }
+
       const cancel = cancelRef.current as HTMLButtonElement;
       const confirm = confirmRef.current as HTMLButtonElement;
+      if (document.activeElement !== cancel && document.activeElement !== confirm) {
+        event.preventDefault();
+        cancel.focus();
+        return;
+      }
       if (event.shiftKey) {
         if (document.activeElement === cancel) {
           event.preventDefault();
@@ -47,7 +70,7 @@ export function ConfirmDialog({ values, loading, onCancel, onConfirm }: ConfirmD
 
   useEffect(() => {
     const previouslyFocused = document.activeElement as HTMLElement | null;
-    confirmRef.current?.focus();
+    (confirmRef.current as HTMLButtonElement).focus();
     document.addEventListener("keydown", onKeyDown);
     return () => {
       document.removeEventListener("keydown", onKeyDown);
@@ -55,14 +78,22 @@ export function ConfirmDialog({ values, loading, onCancel, onConfirm }: ConfirmD
     };
   }, [onKeyDown]);
 
+  useEffect(() => {
+    if (!loading) return;
+    (dialogRef.current as HTMLDivElement).focus();
+  }, [loading]);
+
   return (
-    <div className={styles.modalOverlay} onClick={onCancel}>
+    <div className={styles.modalOverlay} onClick={requestCancel}>
       <div
+        ref={dialogRef}
         className={styles.modal}
         role="dialog"
         aria-modal="true"
+        aria-busy={loading}
         aria-labelledby="confirm-title"
         aria-describedby="confirm-copy"
+        tabIndex={-1}
         onClick={(event) => event.stopPropagation()}
       >
         <p className={styles.modalKicker} aria-hidden>
@@ -105,7 +136,8 @@ export function ConfirmDialog({ values, loading, onCancel, onConfirm }: ConfirmD
             ref={cancelRef}
             type="button"
             className={styles.secondaryButton}
-            onClick={onCancel}
+            onClick={requestCancel}
+            disabled={loading}
           >
             Cancelar
           </button>

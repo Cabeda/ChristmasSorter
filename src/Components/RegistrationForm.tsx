@@ -9,7 +9,7 @@ import type {
 import type SorterEvent from "../../Shared/Interfaces/SorterEvent.Interface";
 import { useDraft } from "../hooks/useDraft";
 import { useOnlineStatus } from "../hooks/useOnlineStatus";
-import { readDraft } from "../lib/draft";
+import { readDraft, getStorage } from "../lib/draft";
 import {
   DEFAULT_VALUES,
   Schema,
@@ -39,7 +39,7 @@ export default function RegistrationForm() {
   const [retrying, setRetrying] = useState(false);
   const online = useOnlineStatus();
 
-  const [initialDraft] = useState(() => readDraft(window.localStorage));
+  const [initialDraft] = useState(() => readDraft(getStorage()));
 
   const {
     control,
@@ -66,6 +66,10 @@ export default function RegistrationForm() {
 
   const removeParticipant = useCallback((index: number) => remove(index), [remove]);
   const handleCancel = useCallback(() => setPendingSend(null), []);
+  const handleClearDraft = useCallback(() => {
+    clearDraft();
+    (document.getElementById("eventName") as HTMLInputElement).focus();
+  }, [clearDraft]);
 
   const toggleSanta = () => {
     const next = clicks + 1;
@@ -171,6 +175,7 @@ export default function RegistrationForm() {
       } else {
         setPendingRetry(null);
         setStatusMessage({ type: "success", text: "Reenvio concluído." });
+        markSent();
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : "";
@@ -268,7 +273,7 @@ export default function RegistrationForm() {
               inputMode="numeric"
               min={0}
               aria-invalid={Boolean(errors.price)}
-              aria-describedby={errors.price ? "price-error" : "price-hint"}
+              aria-describedby={errors.price ? "price-error price-hint" : "price-hint"}
               className={`${styles.input} ${errors.price ? styles.inputError : ""}`}
               {...register("price")}
             />
@@ -390,14 +395,17 @@ export default function RegistrationForm() {
       {statusMessage && (
         <div
           className={
-            statusMessage.type === "success"
-              ? `${styles.success} ${styles.confetti}`
-              : styles.errorMessage
+            statusMessage.type === "success" ? styles.success : styles.errorMessage
           }
           role="status"
           aria-live="polite"
         >
           {statusMessage.text}
+          {statusMessage.type === "success" && (
+            <span className={styles.sparkles} aria-hidden>
+              ✦ ✦ ✦
+            </span>
+          )}
         </div>
       )}
 
@@ -421,7 +429,7 @@ export default function RegistrationForm() {
             {notice === "cleared" && "Rascunho limpo."}
           </p>
           {hasDraft && (
-            <button type="button" className={styles.draftClear} onClick={clearDraft}>
+            <button type="button" className={styles.draftClear} onClick={handleClearDraft}>
               Limpar rascunho
             </button>
           )}

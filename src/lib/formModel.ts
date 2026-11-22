@@ -29,7 +29,7 @@ const MemberSchema = z.object({
 export const Schema = z.object({
   eventName: z.string().nonempty("Nome do evento é obrigatório"),
   participants: z.array(MemberSchema).min(2, "Adicione pelo menos 2 participantes"),
-  eventDate: z.coerce.date(),
+  eventDate: z.coerce.date({ error: "Data inválida" }),
   price: z.string().nonempty("Preço é obrigatório"),
   currency: z.string().nonempty("Moeda é obrigatória"),
 });

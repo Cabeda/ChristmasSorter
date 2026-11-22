@@ -15,8 +15,12 @@ describe("formatEventDate", () => {
 });
 
 describe("toDateInputValue", () => {
-  it("formats a date as YYYY-MM-DD", () => {
-    expect(toDateInputValue(new Date("2026-12-24T12:00:00.000Z"))).toBe("2026-12-24");
+  it("formats a local date as YYYY-MM-DD", () => {
+    expect(toDateInputValue(new Date(2026, 11, 24, 12))).toBe("2026-12-24");
+  });
+
+  it("pads single-digit months and days", () => {
+    expect(toDateInputValue(new Date(2026, 0, 5, 12))).toBe("2026-01-05");
   });
 
   it("returns an empty string for an invalid date", () => {

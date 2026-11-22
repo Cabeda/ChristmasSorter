@@ -3,6 +3,7 @@ import type { UseFormReset, UseFormWatch } from "react-hook-form";
 import {
   DRAFT_DEBOUNCE_MS,
   DRAFT_STORAGE_KEY,
+  getStorage,
   parseDraft,
   removeDraft,
   toDraftValues,
@@ -54,7 +55,7 @@ export function useDraft(
   const persist = useCallback((values: DraftValues) => {
     const json = JSON.stringify(values);
     if (json === lastValuesJson.current) return;
-    if (!writeDraft(window.localStorage, values)) return;
+    if (!writeDraft(getStorage(), values)) return;
     lastValuesJson.current = json;
     setHasDraft(true);
     setNotice("saved");
@@ -72,7 +73,7 @@ export function useDraft(
     (next: DraftNotice | null) => {
       cancel();
       pending.current = null;
-      removeDraft(window.localStorage);
+      removeDraft(getStorage());
       lastValuesJson.current = JSON.stringify(defaults);
       setHasDraft(false);
       setNotice(next);
@@ -108,6 +109,10 @@ export function useDraft(
   useEffect(() => {
     const onStorage = (event: StorageEvent) => {
       if (event.key !== DRAFT_STORAGE_KEY) return;
+      if (event.newValue === null) {
+        discard("cleared");
+        return;
+      }
       const draft = parseDraft(event.newValue);
       if (draft === null) return;
 
@@ -121,7 +126,7 @@ export function useDraft(
 
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
-  }, [cancel, reset]);
+  }, [cancel, discard, reset]);
 
   return { hasDraft, notice, clearDraft, markSent };
 }

@@ -512,8 +512,7 @@
   border: 2px solid var(--red);
 }
 
-.confetti::after {
-  content: "✦ ✦ ✦";
+.sparkles {
   position: absolute;
   top: 6px;
   right: 10px;
@@ -657,7 +656,7 @@
   letter-spacing: 0.2em;
   text-align: center;
   text-transform: uppercase;
-  color: var(--gold-deep);
+  color: var(--red-deep);
 }
 
 .modalHeader {

@@ -58,19 +58,42 @@ export function parseDraft(raw: string | null): Draft | null {
   }
 }
 
+/**
+ * Access `localStorage` without throwing. Browsers can deny the property
+ * itself (blocked cookies, sandboxed iframes), not just individual calls.
+ */
+export function getStorage(): Storage | null {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
 /** Read the current draft, tolerating disabled or throwing storage. */
-export function readDraft(storage: Storage): Draft | null {
-  let raw: string | null = null;
+export function readDraft(storage: Storage | null): Draft | null {
+  if (storage === null) return null;
+
+  let raw: string | null;
   try {
     raw = storage.getItem(DRAFT_STORAGE_KEY);
   } catch {
     return null;
   }
-  return parseDraft(raw);
+  if (raw === null) return null;
+
+  const draft = parseDraft(raw);
+  if (draft === null) removeDraft(storage);
+  return draft;
 }
 
 /** Persist a draft and report whether the storage write actually happened. */
-export function writeDraft(storage: Storage, values: DraftValues, savedAt = Date.now()): boolean {
+export function writeDraft(
+  storage: Storage | null,
+  values: DraftValues,
+  savedAt = Date.now(),
+): boolean {
+  if (storage === null) return false;
   try {
     storage.setItem(
       DRAFT_STORAGE_KEY,
@@ -83,7 +106,8 @@ export function writeDraft(storage: Storage, values: DraftValues, savedAt = Date
 }
 
 /** Remove the draft, tolerating disabled or throwing storage. */
-export function removeDraft(storage: Storage): void {
+export function removeDraft(storage: Storage | null): void {
+  if (storage === null) return;
   try {
     storage.removeItem(DRAFT_STORAGE_KEY);
   } catch {
