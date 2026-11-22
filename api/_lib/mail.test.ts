@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createTransport } from "nodemailer";
 import {
+  TIME_BUDGET_EXHAUSTED,
   createTransporter,
   escapeHtml,
   generateBody,
@@ -91,6 +92,9 @@ describe("createTransporter", () => {
       host: "smtp.gmail.com",
       port: 587,
       secure: false,
+      connectionTimeout: 5_000,
+      greetingTimeout: 5_000,
+      socketTimeout: 15_000,
       auth: { user: "sender@example.com", pass: "secret" },
     });
   });
@@ -104,6 +108,9 @@ describe("createTransporter", () => {
       host: "smtp.example.com",
       port: 2525,
       secure: true,
+      connectionTimeout: 5_000,
+      greetingTimeout: 5_000,
+      socketTimeout: 15_000,
       auth: { user: "sender@example.com", pass: "secret" },
     });
   });
@@ -142,5 +149,23 @@ describe("sendAssignmentEmails", () => {
       sent: 0,
       failed: [],
     });
+  });
+
+  it("reports the remaining recipients when the budget is exhausted", async () => {
+    const sendMail = vi.fn();
+    const transporter = { sendMail } as unknown as Parameters<typeof sendAssignmentEmails>[0];
+
+    const result = await sendAssignmentEmails(transporter, event, [recipient, recipient], {
+      budgetMs: 0,
+    });
+
+    expect(result).toEqual({
+      sent: 0,
+      failed: [
+        { email: "ana@example.com", reason: TIME_BUDGET_EXHAUSTED },
+        { email: "ana@example.com", reason: TIME_BUDGET_EXHAUSTED },
+      ],
+    });
+    expect(sendMail).not.toHaveBeenCalled();
   });
 });

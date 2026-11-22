@@ -1,7 +1,8 @@
 {
   "functions": {
     "api/*": {
-      "supportsCancellation": true
+      "supportsCancellation": true,
+      "maxDuration": 60
     }
   }
 }

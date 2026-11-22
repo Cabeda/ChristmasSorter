@@ -25,6 +25,24 @@ export interface SendOutcome {
   failed: SendFailure[];
 }
 
+export interface SendOptions {
+  /**
+   * Stop handing messages to SMTP after this many milliseconds. The rest are
+   * reported as failures so the caller can return the token and retry them.
+   */
+  budgetMs?: number;
+}
+
+/**
+ * Kept below the 60s function limit, leaving room for SMTP verify, token
+ * sealing, and the response. Unsent recipients are reported for a retry.
+ */
+export const DEFAULT_SEND_BUDGET_MS = 45_000;
+const SMTP_CONNECTION_TIMEOUT_MS = 5_000;
+const SMTP_GREETING_TIMEOUT_MS = 5_000;
+const SMTP_SOCKET_TIMEOUT_MS = 15_000;
+export const TIME_BUDGET_EXHAUSTED = "time budget exhausted";
+
 const HTML_ESCAPES: Record<string, string> = {
   "&": "&amp;",
   "<": "&lt;",
@@ -97,6 +115,9 @@ export function createTransporter(): Transporter {
     host: process.env.SMTP_HOST ?? "smtp.gmail.com",
     port: Number(process.env.SMTP_PORT ?? 587),
     secure: process.env.SMTP_SECURE === "true",
+    connectionTimeout: SMTP_CONNECTION_TIMEOUT_MS,
+    greetingTimeout: SMTP_GREETING_TIMEOUT_MS,
+    socketTimeout: SMTP_SOCKET_TIMEOUT_MS,
     auth: {
       user: process.env.MAIL_ADDRESS,
       pass: process.env.MAIL_PASSWORD,
@@ -106,22 +127,32 @@ export function createTransporter(): Transporter {
 
 /**
  * Send every assignment sequentially. Sequential sends keep us under SMTP
- * rate limits, and one failure never stops the rest.
+ * rate limits, and one failure never stops the rest. The time budget stops
+ * before the serverless function is killed, so the caller still gets a token
+ * and the unsent recipients can be retried.
  *
  * @param transporter The SMTP transport.
  * @param event Event details.
  * @param assignments The draw.
+ * @param options Time budget.
  * @returns How many were sent and which recipients failed.
  */
 export async function sendAssignmentEmails(
   transporter: Transporter,
   event: EventDetails,
   assignments: Recipient[],
+  options: SendOptions = {},
 ): Promise<SendOutcome> {
+  const deadline = Date.now() + (options.budgetMs ?? DEFAULT_SEND_BUDGET_MS);
   let sent = 0;
   const failed: SendFailure[] = [];
 
   for (const recipient of assignments) {
+    if (Date.now() >= deadline) {
+      failed.push({ email: recipient.from.email, reason: TIME_BUDGET_EXHAUSTED });
+      continue;
+    }
+
     try {
       await transporter.sendMail(generateBody(event, recipient));
       sent += 1;
