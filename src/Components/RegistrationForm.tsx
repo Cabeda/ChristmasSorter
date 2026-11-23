@@ -10,21 +10,17 @@ import type SorterEvent from "../../Shared/Interfaces/SorterEvent.Interface";
 import { useDraft } from "../hooks/useDraft";
 import { useOnlineStatus } from "../hooks/useOnlineStatus";
 import { readDraft, getStorage } from "../lib/draft";
+import { fetchWithTimeout } from "../lib/http";
 import {
   DEFAULT_VALUES,
   Schema,
   type FormInputs,
   type FormOutput,
 } from "../lib/formModel";
+import { readRetry, removeRetry, writeRetry, type PendingRetry } from "../lib/retry";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { ParticipantRow } from "./ParticipantRow";
 import styles from "./RegistrationForm.module.css";
-
-type PendingRetry = {
-  token: string;
-  emails: string[];
-  count: number;
-};
 
 type StatusMessage = { type: "success" | "error"; text: string };
 
@@ -35,7 +31,9 @@ export default function RegistrationForm() {
   const [santaMode, setSantaMode] = useState(false);
   const [pendingSend, setPendingSend] = useState<FormOutput | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
-  const [pendingRetry, setPendingRetry] = useState<PendingRetry | null>(null);
+  const [pendingRetry, setPendingRetry] = useState<PendingRetry | null>(() =>
+    readRetry(getStorage()),
+  );
   const [retrying, setRetrying] = useState(false);
   const online = useOnlineStatus();
 
@@ -67,8 +65,11 @@ export default function RegistrationForm() {
   const removeParticipant = useCallback((index: number) => remove(index), [remove]);
   const handleCancel = useCallback(() => setPendingSend(null), []);
   const handleClearDraft = useCallback(() => {
+    removeRetry(getStorage());
+    setPendingRetry(null);
     clearDraft();
-    (document.getElementById("eventName") as HTMLInputElement).focus();
+    const eventName = document.getElementById("eventName");
+    if (eventName instanceof HTMLInputElement) eventName.focus();
   }, [clearDraft]);
 
   const toggleSanta = () => {
@@ -84,6 +85,7 @@ export default function RegistrationForm() {
     setSubmitting(true);
     setStatusMessage(null);
     setPendingRetry(null);
+    removeRetry(getStorage());
 
     const body: SorterEvent = {
       name: data.eventName,
@@ -95,7 +97,7 @@ export default function RegistrationForm() {
     };
 
     try {
-      const res = await fetch("/api/email", {
+      const res = await fetchWithTimeout("/api/email", {
         method: "POST",
         headers: {
           "Content-Type": "application/json; charset=utf-8",
@@ -106,16 +108,19 @@ export default function RegistrationForm() {
       if (!res.ok) throw new Error(payload.error ?? "");
 
       if (payload.failedCount > 0) {
-        setPendingRetry({
+        const retry: PendingRetry = {
           token: payload.token,
           emails: payload.failures.map((failure) => failure.email),
           count: payload.failedCount,
-        });
+        };
+        writeRetry(getStorage(), retry);
+        setPendingRetry(retry);
         setStatusMessage({
           type: "error",
           text: `${payload.sent} convites enviados; ${payload.failedCount} falharam.`,
         });
       } else {
+        removeRetry(getStorage());
         setStatusMessage({
           type: "success",
           text: santaMode ? "Ho Ho Ho! Convites enviados 🎅🎄" : "Convites enviados com sucesso.",
@@ -152,7 +157,7 @@ export default function RegistrationForm() {
   const handleRetry = async (retry: PendingRetry) => {
     setRetrying(true);
     try {
-      const res = await fetch("/api/retry", {
+      const res = await fetchWithTimeout("/api/retry", {
         method: "POST",
         headers: {
           "Content-Type": "application/json; charset=utf-8",
@@ -163,16 +168,19 @@ export default function RegistrationForm() {
       if (!res.ok) throw new Error(payload.error ?? "");
 
       if (payload.failedCount > 0) {
-        setPendingRetry({
+        const next: PendingRetry = {
           token: retry.token,
           emails: payload.failures.map((failure) => failure.email),
           count: payload.failedCount,
-        });
+        };
+        writeRetry(getStorage(), next);
+        setPendingRetry(next);
         setStatusMessage({
           type: "error",
           text: `${payload.sent} reenviados; ${payload.failedCount} continuam a falhar.`,
         });
       } else {
+        removeRetry(getStorage());
         setPendingRetry(null);
         setStatusMessage({ type: "success", text: "Reenvio concluído." });
         markSent();

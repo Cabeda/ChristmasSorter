@@ -11,7 +11,7 @@ a participant) cannot peek at who got whom.
 
 ## Requirements
 
-- Node.js (>=16) and pnpm (the lockfile is pnpm).
+- Node.js >= 20.19 (Vite 7) and pnpm (the lockfile is pnpm).
 - SMTP credentials and a token secret.
 - `SORTER_SECRET` — required. It encrypts the token used by retries.
   Generate one with `openssl rand -base64 48`.
@@ -44,7 +44,12 @@ Never commit real credentials. `.env*` is ignored; `.env.example` is safe.
    replies with counts plus the token. The pairs are never returned or logged.
 3. If some emails fail, the UI offers “Reenviar N falha(s)”. `/api/retry`
    decrypts the same token and resends **only** those recipients, so a failure
-   never changes the draw.
+   never changes the draw. The pending retry is stored with the draft, so it
+   survives a refresh or a lost connection instead of becoming a second draw.
+
+The send loop has a 45-second budget inside a 60-second function limit; a slow
+SMTP server cannot get the function killed before it returns the token. Any
+recipients left unsent are reported as failures and can be retried.
 
 Couples or other “must not draw each other” pairs can be passed as
 `exclusions: [["a@example.com", "b@example.com"]]`; the sorter honors them and
